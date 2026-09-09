@@ -10,6 +10,14 @@
     originalMode: null
   };
 
+  var dragActive = false;
+  var dragCurrentDx = 0;
+
+  function resetCardVisual(card) {
+    card.style.transform = '';
+    card.classList.remove('dragging-right', 'dragging-left');
+  }
+
   function showScreen(id) {
     document.querySelectorAll('.screen').forEach(function (el) {
       el.hidden = el.id !== id;
@@ -46,6 +54,20 @@
     }
   }
 
+  function goToModeScreen() {
+    state.session = null;
+    state.screen = 'mode';
+    document.getElementById('mode-deck-size').textContent = String(state.deck.length);
+    showScreen('screen-mode');
+  }
+
+  function isValidSession(session) {
+    if (!session || !Array.isArray(session.queue)) return false;
+    if (session.mode === 'ring') return Array.isArray(session.allBlocks);
+    if (session.mode === 'simple') return typeof session.round === 'number';
+    return false;
+  }
+
   function goToInputScreen() {
     state.deck = [];
     state.session = null;
@@ -74,9 +96,7 @@
       saveState();
     });
     document.getElementById('btn-done-menu').addEventListener('click', function () {
-      state.session = null;
-      state.screen = 'mode';
-      showScreen('screen-mode');
+      goToModeScreen();
       saveState();
     });
   }
@@ -139,9 +159,11 @@
     var previousMode = state.session.mode;
     state.session = Deck.swipe(state.session, direction);
 
+    dragActive = false;
+    dragCurrentDx = 0;
+
     var card = document.getElementById('card');
-    card.style.transform = '';
-    card.classList.remove('dragging-right', 'dragging-left');
+    resetCardVisual(card);
 
     renderTrainingScreen();
 
@@ -175,36 +197,41 @@
 
   function initDragSwipe() {
     var card = document.getElementById('card');
-    var dragging = false;
     var startX = 0;
-    var currentDx = 0;
     var SWIPE_THRESHOLD = 80;
 
     card.addEventListener('pointerdown', function (event) {
-      dragging = true;
+      dragActive = true;
       startX = event.clientX;
       card.setPointerCapture(event.pointerId);
     });
 
     card.addEventListener('pointermove', function (event) {
-      if (!dragging) return;
-      currentDx = event.clientX - startX;
-      card.style.transform = 'translateX(' + currentDx + 'px) rotate(' + (currentDx / 20) + 'deg)';
-      card.classList.toggle('dragging-right', currentDx > 20);
-      card.classList.toggle('dragging-left', currentDx < -20);
+      if (!dragActive) return;
+      dragCurrentDx = event.clientX - startX;
+      card.style.transform = 'translateX(' + dragCurrentDx + 'px) rotate(' + (dragCurrentDx / 20) + 'deg)';
+      card.classList.toggle('dragging-right', dragCurrentDx > 20);
+      card.classList.toggle('dragging-left', dragCurrentDx < -20);
+    });
+
+    card.addEventListener('pointercancel', function () {
+      if (!dragActive) return;
+      dragActive = false;
+      dragCurrentDx = 0;
+      resetCardVisual(card);
     });
 
     card.addEventListener('pointerup', function () {
-      if (!dragging) return;
-      dragging = false;
-      if (Math.abs(currentDx) > SWIPE_THRESHOLD) {
+      if (!dragActive) return;
+      dragActive = false;
+      if (Math.abs(dragCurrentDx) > SWIPE_THRESHOLD) {
+        var direction = dragCurrentDx > 0 ? 'right' : 'left';
         card.dataset.suppressFlip = '1';
-        commitSwipe(currentDx > 0 ? 'right' : 'left');
+        commitSwipe(direction);
       } else {
-        card.style.transform = '';
-        card.classList.remove('dragging-right', 'dragging-left');
+        resetCardVisual(card);
       }
-      currentDx = 0;
+      dragCurrentDx = 0;
     });
   }
 
@@ -221,11 +248,8 @@
       }
       message.textContent = 'Добавлено ' + result.addedCount + ' карточек, пропущено ' + result.skippedCount + ' строк.';
       state.deck = result.cards;
-      state.session = null;
-      state.screen = 'mode';
-      document.getElementById('mode-deck-size').textContent = String(state.deck.length);
+      goToModeScreen();
       saveState();
-      showScreen('screen-mode');
     });
   }
 
@@ -249,12 +273,13 @@
         state.originalMode = saved.originalMode;
         state.screen = saved.screen;
 
-        if (state.screen === 'training' && state.session) {
+        if (state.screen === 'training' && isValidSession(state.session)) {
           showScreen('screen-training');
           renderTrainingScreen();
+        } else if (state.screen === 'done' && isValidSession(state.session)) {
+          showScreen('screen-done');
         } else {
-          document.getElementById('mode-deck-size').textContent = String(state.deck.length);
-          showScreen('screen-mode');
+          goToModeScreen();
         }
       });
 

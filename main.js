@@ -85,6 +85,13 @@
     }
   }
 
+  function initTrainingClose() {
+    document.getElementById('btn-training-close').addEventListener('click', function () {
+      goToModeScreen();
+      saveState();
+    });
+  }
+
   function initNewTableLinks() {
     document.getElementById('btn-mode-new-table').addEventListener('click', confirmNewTable);
     document.getElementById('btn-training-new-table').addEventListener('click', confirmNewTable);
@@ -99,6 +106,47 @@
       goToModeScreen();
       saveState();
     });
+  }
+
+  function renderSimpleProgress(session) {
+    document.getElementById('progress-ring').hidden = true;
+    var track = document.getElementById('progress-simple');
+    track.hidden = false;
+
+    var total = session.queue.length + session.nextRound.length;
+    var done = session.nextRound.length;
+    document.getElementById('progress-simple-fill').style.width = (total > 0 ? (done / total) * 100 : 0) + '%';
+    document.getElementById('training-progress').textContent = done + ' / ' + total;
+  }
+
+  function renderRingProgress(session) {
+    document.getElementById('progress-simple').hidden = true;
+    var container = document.getElementById('progress-ring');
+    container.hidden = false;
+    container.innerHTML = '';
+
+    session.allBlocks.forEach(function (block, i) {
+      var segment = document.createElement('div');
+      segment.className = 'segment';
+      var fill = document.createElement('div');
+      fill.className = 'segment-fill';
+
+      var percent;
+      if (i < session.blockIndex) {
+        percent = 100;
+      } else if (i === session.blockIndex) {
+        var doneInBlock = block.length - session.queue.length;
+        percent = block.length > 0 ? (doneInBlock / block.length) * 100 : 100;
+      } else {
+        percent = 0;
+      }
+      fill.style.width = percent + '%';
+
+      segment.appendChild(fill);
+      container.appendChild(segment);
+    });
+
+    document.getElementById('training-progress').textContent = 'Блок ' + (session.blockIndex + 1) + ' / ' + session.allBlocks.length;
   }
 
   function renderTrainingScreen() {
@@ -117,11 +165,10 @@
     document.getElementById('card-front-text').textContent = current.front;
     document.getElementById('card-back-text').textContent = current.back;
 
-    var progress = document.getElementById('training-progress');
     if (session.mode === 'ring') {
-      progress.textContent = 'Блок ' + (session.blockIndex + 1) + ' из ' + session.allBlocks.length + '. Осталось в блоке: ' + session.queue.length;
+      renderRingProgress(session);
     } else {
-      progress.textContent = 'Раунд ' + session.round + '. Осталось в раунде: ' + session.queue.length;
+      renderSimpleProgress(session);
     }
   }
 
@@ -262,6 +309,7 @@
     initDragSwipe();
     initNewTableLinks();
     initDoneScreen();
+    initTrainingClose();
 
     var saved = loadState();
     if (saved && saved.deck && saved.deck.length > 0) {

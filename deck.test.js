@@ -85,3 +85,55 @@ test('createSession builds a ring-mode session with blocks of 7', () => {
   assert.equal(session.allBlocks.length, 2);
   assert.equal(session.queue.length, 7);
 });
+
+test('simple mode: swiping right on every card in a round finishes the session', () => {
+  let session = Deck.createSession([{ front: 'a', back: '1' }, { front: 'b', back: '2' }], 'simple');
+  session = Deck.swipe(session, 'right');
+  assert.equal(session.finished, false);
+  assert.equal(session.queue.length, 1);
+  session = Deck.swipe(session, 'right');
+  assert.equal(session.finished, true);
+});
+
+test('simple mode: swiping left requeues the card and starts a new round without finishing', () => {
+  let session = Deck.createSession([{ front: 'a', back: '1' }, { front: 'b', back: '2' }], 'simple');
+  session = Deck.swipe(session, 'left');
+  assert.equal(session.queue.length, 2);
+  assert.equal(session.queue[0].front, 'b');
+  session = Deck.swipe(session, 'right');
+  session = Deck.swipe(session, 'right');
+  assert.equal(session.finished, false);
+  assert.equal(session.round, 2);
+  assert.equal(session.queue.length, 2);
+});
+
+test('ring mode: finishing a block advances to the next block', () => {
+  const deck = Array.from({ length: 8 }, (_, i) => ({ front: String(i), back: String(i) }));
+  let session = Deck.createSession(deck, 'ring');
+  for (let i = 0; i < 7; i++) {
+    session = Deck.swipe(session, 'right');
+  }
+  assert.equal(session.mode, 'ring');
+  assert.equal(session.blockIndex, 1);
+  assert.equal(session.queue.length, 1);
+});
+
+test('ring mode: finishing the last block starts a simple-mode final review over the full deck', () => {
+  const deck = Array.from({ length: 8 }, (_, i) => ({ front: String(i), back: String(i) }));
+  let session = Deck.createSession(deck, 'ring');
+  for (let i = 0; i < 8; i++) {
+    session = Deck.swipe(session, 'right');
+  }
+  assert.equal(session.mode, 'simple');
+  assert.equal(session.round, 1);
+  assert.equal(session.queue.length, 8);
+  assert.equal(session.finished, false);
+});
+
+test('swipe is a no-op once the session is finished', () => {
+  let session = Deck.createSession([{ front: 'a', back: '1' }], 'simple');
+  session = Deck.swipe(session, 'right');
+  assert.equal(session.finished, true);
+  const after = Deck.swipe(session, 'right');
+  assert.deepEqual(after, session);
+});

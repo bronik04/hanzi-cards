@@ -94,9 +94,74 @@
     };
   }
 
+  function simpleSwipe(state, direction) {
+    var queue = state.queue.slice();
+    var nextRound = state.nextRound.slice();
+    var perfectRound = state.perfectRound;
+    var current = queue.shift();
+
+    if (direction === 'right') {
+      nextRound.push(current);
+    } else {
+      queue.push(current);
+      perfectRound = false;
+    }
+
+    if (queue.length === 0) {
+      if (perfectRound) {
+        return { mode: 'simple', round: state.round, queue: [], nextRound: [], perfectRound: true, finished: true };
+      }
+      return { mode: 'simple', round: state.round + 1, queue: nextRound, nextRound: [], perfectRound: true, finished: false };
+    }
+
+    return { mode: 'simple', round: state.round, queue: queue, nextRound: nextRound, perfectRound: perfectRound, finished: false };
+  }
+
+  function ringSwipe(state, direction) {
+    var queue = state.queue.slice();
+    var current = queue.shift();
+
+    if (direction === 'left') {
+      queue.push(current);
+    }
+
+    if (queue.length === 0) {
+      var nextBlockIndex = state.blockIndex + 1;
+      if (nextBlockIndex < state.allBlocks.length) {
+        return {
+          mode: 'ring',
+          allBlocks: state.allBlocks,
+          blockIndex: nextBlockIndex,
+          queue: state.allBlocks[nextBlockIndex].slice(),
+          finished: false
+        };
+      }
+      var fullDeck = [];
+      state.allBlocks.forEach(function (block) {
+        fullDeck = fullDeck.concat(block);
+      });
+      return createSession(fullDeck, 'simple');
+    }
+
+    return {
+      mode: 'ring',
+      allBlocks: state.allBlocks,
+      blockIndex: state.blockIndex,
+      queue: queue,
+      finished: false
+    };
+  }
+
+  function swipe(state, direction) {
+    if (state.finished) return state;
+    if (state.mode === 'ring') return ringSwipe(state, direction);
+    return simpleSwipe(state, direction);
+  }
+
   return {
     parseTable: parseTable,
     splitIntoBlocks: splitIntoBlocks,
-    createSession: createSession
+    createSession: createSession,
+    swipe: swipe
   };
 });

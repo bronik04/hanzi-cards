@@ -67,6 +67,77 @@
     });
   }
 
+  function commitSwipe(direction) {
+    var previousMode = state.session.mode;
+    state.session = Deck.swipe(state.session, direction);
+
+    var card = document.getElementById('card');
+    card.style.transform = '';
+    card.classList.remove('dragging-right', 'dragging-left');
+
+    renderTrainingScreen();
+
+    var banner = document.getElementById('training-banner');
+    if (previousMode === 'ring' && state.session.mode === 'simple') {
+      banner.textContent = 'Все блоки пройдены! Финальное повторение всей колоды.';
+      banner.hidden = false;
+    } else {
+      banner.hidden = true;
+    }
+  }
+
+  function initSwipeButtons() {
+    document.getElementById('btn-swipe-left').addEventListener('click', function () {
+      commitSwipe('left');
+    });
+    document.getElementById('btn-swipe-right').addEventListener('click', function () {
+      commitSwipe('right');
+    });
+  }
+
+  function initKeyboardSwipe() {
+    document.addEventListener('keydown', function (event) {
+      if (state.screen !== 'training') return;
+      if (event.key === 'ArrowRight') commitSwipe('right');
+      if (event.key === 'ArrowLeft') commitSwipe('left');
+    });
+  }
+
+  function initDragSwipe() {
+    var card = document.getElementById('card');
+    var dragging = false;
+    var startX = 0;
+    var currentDx = 0;
+    var SWIPE_THRESHOLD = 80;
+
+    card.addEventListener('pointerdown', function (event) {
+      dragging = true;
+      startX = event.clientX;
+      card.setPointerCapture(event.pointerId);
+    });
+
+    card.addEventListener('pointermove', function (event) {
+      if (!dragging) return;
+      currentDx = event.clientX - startX;
+      card.style.transform = 'translateX(' + currentDx + 'px) rotate(' + (currentDx / 20) + 'deg)';
+      card.classList.toggle('dragging-right', currentDx > 20);
+      card.classList.toggle('dragging-left', currentDx < -20);
+    });
+
+    card.addEventListener('pointerup', function () {
+      if (!dragging) return;
+      dragging = false;
+      if (Math.abs(currentDx) > SWIPE_THRESHOLD) {
+        card.dataset.suppressFlip = '1';
+        commitSwipe(currentDx > 0 ? 'right' : 'left');
+      } else {
+        card.style.transform = '';
+        card.classList.remove('dragging-right', 'dragging-left');
+      }
+      currentDx = 0;
+    });
+  }
+
   function initInputScreen() {
     var textarea = document.getElementById('input-table');
     var message = document.getElementById('input-message');
@@ -91,6 +162,9 @@
     initInputScreen();
     initModeScreen();
     initCardFlip();
+    initSwipeButtons();
+    initKeyboardSwipe();
+    initDragSwipe();
     showScreen('screen-input');
   }
 

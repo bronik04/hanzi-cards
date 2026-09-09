@@ -64,7 +64,39 @@
     return { cards: cards, addedCount: cards.length, skippedCount: skippedCount };
   }
 
+  function splitIntoBlocks(cards, blockSize) {
+    var size = blockSize || DEFAULT_BLOCK_SIZE;
+    var blocks = [];
+    for (var i = 0; i < cards.length; i += size) {
+      blocks.push(cards.slice(i, i + size));
+    }
+    return blocks;
+  }
+
+  function createSession(deck, mode) {
+    if (mode === 'ring') {
+      var blocks = splitIntoBlocks(deck, DEFAULT_BLOCK_SIZE);
+      return {
+        mode: 'ring',
+        allBlocks: blocks,
+        blockIndex: 0,
+        queue: blocks.length > 0 ? blocks[0].slice() : [],
+        finished: blocks.length === 0
+      };
+    }
+    return {
+      mode: 'simple',
+      round: 1,
+      queue: deck.slice(),
+      nextRound: [],
+      perfectRound: true,
+      finished: deck.length === 0
+    };
+  }
+
   return {
-    parseTable: parseTable
+    parseTable: parseTable,
+    splitIntoBlocks: splitIntoBlocks,
+    createSession: createSession
   };
 });

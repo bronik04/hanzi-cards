@@ -1,6 +1,8 @@
 (function () {
   'use strict';
 
+  var STORAGE_KEY = 'flashcards.state.v1';
+
   var state = {
     screen: 'input',
     deck: [],
@@ -11,6 +13,71 @@
   function showScreen(id) {
     document.querySelectorAll('.screen').forEach(function (el) {
       el.hidden = el.id !== id;
+    });
+  }
+
+  function saveState() {
+    try {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify({
+        deck: state.deck,
+        session: state.session,
+        screen: state.screen,
+        originalMode: state.originalMode
+      }));
+    } catch (e) {
+      return;
+    }
+  }
+
+  function loadState() {
+    try {
+      var raw = localStorage.getItem(STORAGE_KEY);
+      return raw ? JSON.parse(raw) : null;
+    } catch (e) {
+      return null;
+    }
+  }
+
+  function clearState() {
+    try {
+      localStorage.removeItem(STORAGE_KEY);
+    } catch (e) {
+      return;
+    }
+  }
+
+  function goToInputScreen() {
+    state.deck = [];
+    state.session = null;
+    state.originalMode = null;
+    state.screen = 'input';
+    document.getElementById('input-table').value = '';
+    document.getElementById('input-message').textContent = '';
+    showScreen('screen-input');
+  }
+
+  function confirmNewTable() {
+    if (window.confirm('Загрузить новую таблицу? Текущая колода и прогресс будут удалены.')) {
+      clearState();
+      goToInputScreen();
+    }
+  }
+
+  function initNewTableLinks() {
+    document.getElementById('btn-mode-new-table').addEventListener('click', confirmNewTable);
+    document.getElementById('btn-training-new-table').addEventListener('click', confirmNewTable);
+  }
+
+  function initDoneScreen() {
+    document.getElementById('btn-done-restart').addEventListener('click', function () {
+      startSession(state.originalMode);
+      saveState();
+    });
+    document.getElementById('btn-done-menu').addEventListener('click', function () {
+      state.session = null;
+      state.screen = 'mode';
+      showScreen('screen-mode');
+      saveState();
     });
   }
 
@@ -43,6 +110,7 @@
     state.session = Deck.createSession(state.deck, mode);
     state.screen = 'training';
     document.getElementById('training-banner').hidden = true;
+    saveState();
     showScreen('screen-training');
     renderTrainingScreen();
   }
@@ -84,6 +152,8 @@
     } else {
       banner.hidden = true;
     }
+
+    saveState();
   }
 
   function initSwipeButtons() {
@@ -154,6 +224,7 @@
       state.session = null;
       state.screen = 'mode';
       document.getElementById('mode-deck-size').textContent = String(state.deck.length);
+      saveState();
       showScreen('screen-mode');
     });
   }
@@ -165,6 +236,37 @@
     initSwipeButtons();
     initKeyboardSwipe();
     initDragSwipe();
+    initNewTableLinks();
+    initDoneScreen();
+
+    var saved = loadState();
+    if (saved && saved.deck && saved.deck.length > 0) {
+      document.getElementById('resume-info').textContent = 'Колода: ' + saved.deck.length + ' карточек.';
+
+      document.getElementById('btn-resume-continue').addEventListener('click', function () {
+        state.deck = saved.deck;
+        state.session = saved.session;
+        state.originalMode = saved.originalMode;
+        state.screen = saved.screen;
+
+        if (state.screen === 'training' && state.session) {
+          showScreen('screen-training');
+          renderTrainingScreen();
+        } else {
+          document.getElementById('mode-deck-size').textContent = String(state.deck.length);
+          showScreen('screen-mode');
+        }
+      });
+
+      document.getElementById('btn-resume-new').addEventListener('click', function () {
+        clearState();
+        goToInputScreen();
+      });
+
+      showScreen('screen-resume');
+      return;
+    }
+
     showScreen('screen-input');
   }
 

@@ -56,6 +56,17 @@
     });
   }
 
+  function initCardFlip() {
+    var card = document.getElementById('card');
+    card.addEventListener('click', function () {
+      if (card.dataset.suppressFlip === '1') {
+        card.dataset.suppressFlip = '0';
+        return;
+      }
+      card.classList.toggle('flipped');
+    });
+  }
+
   function initInputScreen() {
     var textarea = document.getElementById('input-table');
     var message = document.getElementById('input-message');
@@ -79,6 +90,7 @@
   function boot() {
     initInputScreen();
     initModeScreen();
+    initCardFlip();
     showScreen('screen-input');
   }
 

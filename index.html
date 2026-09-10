@@ -15,7 +15,7 @@
     --accent: #4a5cf0;
     --accent-active: #5d6ef5;
     --know: #22c58a;
-    --unknown: #f6a531;
+    --unknown: #ef4444;
   }
 
   * { box-sizing: border-box; }
@@ -150,6 +150,26 @@
     letter-spacing: 0.02em;
     text-align: center;
   }
+
+  .training-counters {
+    display: flex;
+    justify-content: space-between;
+    margin-bottom: 1.25rem;
+  }
+
+  .counter-pill {
+    min-width: 2.75rem;
+    padding: 0.4rem 0.9rem;
+    border-radius: 999px;
+    font-weight: 800;
+    font-size: 1.05rem;
+    text-align: center;
+    border: 2px solid;
+    background: transparent;
+  }
+
+  .counter-unknown { color: var(--unknown); border-color: var(--unknown); }
+  .counter-known { color: var(--know); border-color: var(--know); }
 
   .progress-track {
     height: 6px;
@@ -298,6 +318,11 @@
       </div>
 
       <div id="progress-ring" class="progress-segments" hidden></div>
+
+      <div class="training-counters">
+        <span id="count-unknown" class="counter-pill counter-unknown">0</span>
+        <span id="count-known" class="counter-pill counter-known">0</span>
+      </div>
 
       <p id="training-banner" class="training-banner" hidden></p>
 

@@ -13,6 +13,14 @@
   var dragActive = false;
   var dragCurrentDx = 0;
 
+  var knownCount = 0;
+  var unknownCount = 0;
+
+  function renderCounters() {
+    document.getElementById('count-unknown').textContent = String(unknownCount);
+    document.getElementById('count-known').textContent = String(knownCount);
+  }
+
   function resetCardVisual(card) {
     card.style.transform = '';
     card.classList.remove('dragging-right', 'dragging-left');
@@ -30,7 +38,9 @@
         deck: state.deck,
         session: state.session,
         screen: state.screen,
-        originalMode: state.originalMode
+        originalMode: state.originalMode,
+        knownCount: knownCount,
+        unknownCount: unknownCount
       }));
     } catch (e) {
       return;
@@ -170,12 +180,16 @@
     } else {
       renderSimpleProgress(session);
     }
+
+    renderCounters();
   }
 
   function startSession(mode) {
     state.originalMode = mode;
     state.session = Deck.createSession(state.deck, mode);
     state.screen = 'training';
+    knownCount = 0;
+    unknownCount = 0;
     document.getElementById('training-banner').hidden = true;
     saveState();
     showScreen('screen-training');
@@ -204,7 +218,26 @@
 
   function commitSwipe(direction) {
     var previousMode = state.session.mode;
+    var previousRound = state.session.round;
+    var previousBlockIndex = state.session.blockIndex;
+
+    if (direction === 'right') {
+      knownCount++;
+    } else {
+      unknownCount++;
+    }
+
     state.session = Deck.swipe(state.session, direction);
+
+    var startedNewSegment =
+      state.session.mode !== previousMode ||
+      (state.session.mode === 'simple' && state.session.round !== previousRound) ||
+      (state.session.mode === 'ring' && state.session.blockIndex !== previousBlockIndex);
+
+    if (startedNewSegment) {
+      knownCount = 0;
+      unknownCount = 0;
+    }
 
     dragActive = false;
     dragCurrentDx = 0;
@@ -320,6 +353,8 @@
         state.session = saved.session;
         state.originalMode = saved.originalMode;
         state.screen = saved.screen;
+        knownCount = saved.knownCount || 0;
+        unknownCount = saved.unknownCount || 0;
 
         if (state.screen === 'training' && isValidSession(state.session)) {
           showScreen('screen-training');

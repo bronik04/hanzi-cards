@@ -156,7 +156,9 @@
       container.appendChild(segment);
     });
 
-    document.getElementById('training-progress').textContent = 'Блок ' + (session.blockIndex + 1) + ' / ' + session.allBlocks.length;
+    document.getElementById('training-progress').textContent =
+      'Блок ' + (session.blockIndex + 1) + ' / ' + session.allBlocks.length +
+      ' · Осталось в круге: ' + session.queue.length;
   }
 
   function renderTrainingScreen() {
@@ -333,8 +335,36 @@
     });
   }
 
+  function initFileUpload() {
+    var fileInput = document.getElementById('input-file');
+    var chooseButton = document.getElementById('btn-choose-file');
+    var textarea = document.getElementById('input-table');
+    var message = document.getElementById('input-message');
+
+    chooseButton.addEventListener('click', function () {
+      fileInput.click();
+    });
+
+    fileInput.addEventListener('change', function () {
+      var file = fileInput.files[0];
+      fileInput.value = '';
+      if (!file) return;
+
+      var reader = new FileReader();
+      reader.onload = function () {
+        textarea.value = String(reader.result);
+        message.textContent = 'Файл «' + file.name + '» загружен в поле ниже. Проверьте и нажмите «Создать колоду».';
+      };
+      reader.onerror = function () {
+        message.textContent = 'Не удалось прочитать файл «' + file.name + '». Попробуйте вставить таблицу вручную.';
+      };
+      reader.readAsText(file, 'UTF-8');
+    });
+  }
+
   function boot() {
     initInputScreen();
+    initFileUpload();
     initModeScreen();
     initCardFlip();
     initSwipeButtons();

@@ -293,6 +293,10 @@
     <section id="screen-input" class="screen" hidden>
       <h1>Вставьте таблицу (слово, перевод)</h1>
       <textarea id="input-table" placeholder="кошка,cat&#10;собака,dog"></textarea>
+      <div class="input-file-row">
+        <button id="btn-choose-file" class="link-button" type="button">Или загрузить файл (.csv, .txt)</button>
+        <input id="input-file" type="file" accept=".csv,.txt,text/csv,text/plain" hidden>
+      </div>
       <p id="input-message"></p>
       <button id="btn-create-deck" class="btn">Создать колоду</button>
     </section>

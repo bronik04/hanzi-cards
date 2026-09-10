@@ -78,6 +78,10 @@
     return false;
   }
 
+  function updateInputCancelButton() {
+    document.getElementById('btn-cancel-input').hidden = state.deck.length === 0;
+  }
+
   function goToInputScreen() {
     state.deck = [];
     state.session = null;
@@ -85,14 +89,30 @@
     state.screen = 'input';
     document.getElementById('input-table').value = '';
     document.getElementById('input-message').textContent = '';
+    updateInputCancelButton();
     showScreen('screen-input');
   }
 
-  function confirmNewTable() {
-    if (window.confirm('Загрузить новую таблицу? Текущая колода и прогресс будут удалены.')) {
-      clearState();
-      goToInputScreen();
+  function goToInputScreenForNewTable() {
+    state.screen = 'input';
+    document.getElementById('input-table').value = '';
+    document.getElementById('input-message').textContent = '';
+    updateInputCancelButton();
+    showScreen('screen-input');
+  }
+
+  function cancelInputScreen() {
+    if (isValidSession(state.session)) {
+      state.screen = 'training';
+      showScreen('screen-training');
+      renderTrainingScreen();
+    } else if (state.deck.length > 0) {
+      goToModeScreen();
     }
+  }
+
+  function initInputCancel() {
+    document.getElementById('btn-cancel-input').addEventListener('click', cancelInputScreen);
   }
 
   function initTrainingClose() {
@@ -103,8 +123,8 @@
   }
 
   function initNewTableLinks() {
-    document.getElementById('btn-mode-new-table').addEventListener('click', confirmNewTable);
-    document.getElementById('btn-training-new-table').addEventListener('click', confirmNewTable);
+    document.getElementById('btn-mode-new-table').addEventListener('click', goToInputScreenForNewTable);
+    document.getElementById('btn-training-new-table').addEventListener('click', goToInputScreenForNewTable);
   }
 
   function initDoneScreen() {
@@ -171,7 +191,13 @@
     }
 
     var card = document.getElementById('card');
+    var cardInner = card.querySelector('.card-inner');
+
+    cardInner.style.transition = 'none';
+    void cardInner.offsetHeight;
     card.classList.remove('flipped');
+    void cardInner.offsetHeight;
+    cardInner.style.transition = '';
 
     var current = session.queue[0];
     document.getElementById('card-front-text').textContent = current.front;
@@ -373,6 +399,7 @@
     initNewTableLinks();
     initDoneScreen();
     initTrainingClose();
+    initInputCancel();
 
     var saved = loadState();
     if (saved && saved.deck && saved.deck.length > 0) {

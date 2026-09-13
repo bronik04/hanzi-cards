@@ -28,7 +28,12 @@ jobs:
         with:
           node-version-file: .nvmrc
           cache: npm
-      - run: npm ci
+      # npm install, а не npm ci: npm на macOS не кладёт в lock-файл
+      # @rollup/rollup-linux-arm64-musl (26 платформ rollup из 27), и строгая
+      # проверка полноты в npm ci падает на пакете, который этому раннеру
+      # (linux x64) не нужен вовсе. Lock-файл закоммичен и по-прежнему
+      # определяет версии.
+      - run: npm install --no-audit --no-fund
       - run: npm run build
         env:
           # Единственное место, где base отличается от корня.

@@ -11,10 +11,16 @@ class PointerEventPolyfill extends MouseEvent {
   }
 }
 
-if (!('PointerEvent' in window)) {
-  window.PointerEvent = PointerEventPolyfill as unknown as typeof PointerEvent;
-}
-if (Element.prototype.setPointerCapture === undefined) {
-  Element.prototype.setPointerCapture = () => {};
-  Element.prototype.releasePointerCapture = () => {};
-}
+// Через явный тип, а не через `in`: по типам PointerEvent в window есть всегда,
+// и проверка `'PointerEvent' in window` сузила бы отрицательную ветку до never.
+const view = window as Window & {
+  PointerEvent?: typeof PointerEvent;
+};
+const element = Element.prototype as Element & {
+  setPointerCapture?: Element['setPointerCapture'];
+  releasePointerCapture?: Element['releasePointerCapture'];
+};
+
+view.PointerEvent ??= PointerEventPolyfill as unknown as typeof PointerEvent;
+element.setPointerCapture ??= () => {};
+element.releasePointerCapture ??= () => {};

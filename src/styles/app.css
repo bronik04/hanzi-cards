@@ -305,3 +305,27 @@
 .training__confirm p {
   margin: 0;
 }
+
+.warning {
+  margin: 0;
+  padding: 0.5rem var(--gap);
+  background: var(--no);
+  color: var(--bg);
+  text-align: center;
+}
+
+.resume__info,
+.resume__warning,
+.done__info,
+.done__stats {
+  margin: 0;
+  color: var(--text-muted);
+}
+
+.resume__buttons,
+.done__buttons {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--gap);
+  justify-content: center;
+}

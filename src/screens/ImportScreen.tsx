@@ -1,6 +1,7 @@
 import { useMemo, useRef, useState } from 'react';
 import type { ChangeEvent } from 'react';
-import { plural } from '@/core/plural';
+import { assignIds } from '@/core/deck';
+import { cardsCount, plural } from '@/core/plural';
 import { parseTable } from '@/core/parse';
 import type { ColumnMode } from '@/core/parse';
 import { useAppDispatch, useAppState } from '@/state/AppContext';
@@ -14,10 +15,11 @@ const COLUMN_OPTIONS: ReadonlyArray<{ value: ColumnMode; label: string }> = [
 ];
 
 export default function ImportScreen() {
-  const { cards } = useAppState();
+  const { cards, session } = useAppState();
   const dispatch = useAppDispatch();
   const [text, setText] = useState('');
   const [columnMode, setColumnMode] = useState<ColumnMode>('auto');
+  const [fileError, setFileError] = useState('');
   const fileInput = useRef<HTMLInputElement>(null);
 
   const result = useMemo(() => parseTable(text, columnMode), [text, columnMode]);
@@ -28,8 +30,13 @@ export default function ImportScreen() {
     const file = event.target.files?.[0];
     if (file === undefined) return;
     const reader = new FileReader();
-    reader.onload = () => setText(String(reader.result ?? ''));
-    reader.onerror = () => setText('');
+    reader.onload = () => {
+      setFileError('');
+      setText(String(reader.result ?? ''));
+    };
+    // Молча очищать поле нельзя: со стороны это выглядит так, будто
+    // приложение съело уже набранную таблицу.
+    reader.onerror = () => setFileError(`Не удалось прочитать файл «${file.name}»`);
     reader.readAsText(file);
     event.target.value = '';
   }
@@ -37,6 +44,10 @@ export default function ImportScreen() {
   return (
     <section className="screen">
       <h1>Вставьте таблицу со словами</h1>
+
+      {session !== null && !session.finished && (
+        <p className="import__notice">Идёт тренировка — новая колода её заменит</p>
+      )}
 
       <textarea
         className="import__textarea"
@@ -58,6 +69,8 @@ export default function ImportScreen() {
           onChange={handleFile}
         />
       </div>
+
+      {fileError !== '' && <p className="import__error">{fileError}</p>}
 
       <fieldset className="import__columns">
         <legend>Колонки таблицы</legend>
@@ -85,8 +98,8 @@ export default function ImportScreen() {
             </tr>
           </thead>
           <tbody>
-            {preview.map((card) => (
-              <tr key={card.id} data-testid="preview-row">
+            {preview.map((card, index) => (
+              <tr key={`${index}-${card.hanzi}`} data-testid="preview-row">
                 <td>{card.hanzi}</td>
                 <td>{card.pinyin}</td>
                 <td>{card.translation}</td>
@@ -103,7 +116,7 @@ export default function ImportScreen() {
         type="button"
         className="btn"
         disabled={result.addedCount === 0}
-        onClick={() => dispatch({ type: 'deck-imported', cards: result.cards })}
+        onClick={() => dispatch({ type: 'deck-imported', cards: assignIds(result.cards) })}
       >
         Создать колоду
       </button>
@@ -112,7 +125,7 @@ export default function ImportScreen() {
         <button
           type="button"
           className="link-button"
-          onClick={() => dispatch({ type: 'go-to-mode' })}
+          onClick={() => dispatch({ type: 'import-cancelled' })}
         >
           Отменить
         </button>
@@ -123,7 +136,7 @@ export default function ImportScreen() {
 
 function describe(added: number, skipped: number): string {
   if (added === 0 && skipped === 0) return '';
-  const addedText = `Добавлено ${added} ${plural(added, ['карточка', 'карточки', 'карточек'])}`;
+  const addedText = `Добавлено ${cardsCount(added)}`;
   if (skipped === 0) return addedText;
   const skippedVerb = plural(skipped, ['пропущена', 'пропущено', 'пропущено']);
   const skippedNoun = plural(skipped, ['строка', 'строки', 'строк']);

@@ -17,21 +17,24 @@ const SYLLABLE_WITH_TONE = /([a-zA-ZüÜ]+)([0-5])/g;
 export function normalizePinyin(input: string): string {
   const prepared = input.replace(/u:/g, 'ü').replace(/U:/g, 'Ü');
 
-  return prepared.replace(SYLLABLE_WITH_TONE, (_match, letters: string, digit: string) => {
+  return prepared.replace(SYLLABLE_WITH_TONE, (match, letters: string, digit: string) => {
     // v → ü только внутри слога с тоном: иначе английский перевод,
     // ошибочно принятый за пиньинь, превратился бы в кашу.
     const syllable = letters.replace(/v/g, 'ü').replace(/V/g, 'Ü');
+
+    // Без гласной цифра тоном быть не может: «HSK4» — это не слог,
+    // и отрезать у неё четвёрку значит молча испортить данные.
+    const index = toneVowelIndex(syllable);
+    if (index === -1) return match;
+
     const tone = Number(digit);
     // 0 и 5 — нейтральный тон: цифра уходит, знак не ставится.
     if (tone === 0 || tone === 5) return syllable;
-    return applyTone(syllable, tone);
+    return applyTone(syllable, tone, index);
   });
 }
 
-function applyTone(syllable: string, tone: number): string {
-  const index = toneVowelIndex(syllable);
-  if (index === -1) return syllable;
-
+function applyTone(syllable: string, tone: number, index: number): string {
   const vowel = syllable[index];
   if (vowel === undefined) return syllable;
 

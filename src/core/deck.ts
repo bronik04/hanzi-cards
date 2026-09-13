@@ -1,9 +1,14 @@
+import { newId } from '@/core/id';
+
 export type Card = {
   id: string;
   hanzi: string;
   pinyin: string;
   translation: string;
 };
+
+/** Карточка до импорта: содержимое уже разобрано, идентификатора ещё нет. */
+export type ParsedCard = Omit<Card, 'id'>;
 
 export type Direction = 'hanzi-to-translation' | 'translation-to-hanzi' | 'hanzi-to-pinyin';
 
@@ -35,6 +40,11 @@ export function splitIntoBlocks<T>(items: readonly T[], blockSize: number = BLOC
     blocks.push(items.slice(i, i + blockSize));
   }
   return blocks;
+}
+
+/** Выдаёт идентификаторы один раз, в момент создания колоды. */
+export function assignIds(cards: readonly ParsedCard[]): Card[] {
+  return cards.map((card) => ({ id: newId(), ...card }));
 }
 
 export function hasPinyin(cards: readonly Card[]): boolean {

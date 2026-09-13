@@ -134,3 +134,14 @@ export function ringProgress(session: RingSession): {
     remaining: session.queue.length,
   };
 }
+
+/**
+ * Человеческое название текущего этапа тренировки. Живёт здесь, а не в экранах:
+ * иначе знание об устройстве сессии расползается по слою представления.
+ */
+export function stageLabel(session: Session): string {
+  if (session.mode === 'ring') {
+    return `Блок ${session.blockIndex + 1} из ${session.blocks.length}`;
+  }
+  return session.finalRound ? 'Сводный круг' : `Круг ${session.round}`;
+}

@@ -59,6 +59,23 @@ describe('App: полный цикл', () => {
     expect(screen.getByText('Знаю: 2 · Не знаю: 0')).toBeInTheDocument();
   });
 
+  it('отмена импорта возвращает в тренировку и сохраняет прогресс', async () => {
+    const user = userEvent.setup();
+    const { storage } = memoryStorage();
+    render(<App storage={storage} />);
+
+    await importDeck(user);
+    await user.click(screen.getByRole('button', { name: 'Простой просмотр' }));
+    await user.click(screen.getByRole('button', { name: 'Знаю' }));
+    await screen.findByText('谢谢');
+
+    await user.click(screen.getByRole('button', { name: 'Загрузить новую таблицу' }));
+    await user.click(screen.getByRole('button', { name: 'Отменить' }));
+
+    expect(screen.getByText('谢谢')).toBeInTheDocument();
+    expect(screen.getByTestId('count-known')).toHaveTextContent('1');
+  });
+
   it('сохранённая сессия приводит на экран возобновления', () => {
     const stored: StoredState = {
       version: STORAGE_VERSION,

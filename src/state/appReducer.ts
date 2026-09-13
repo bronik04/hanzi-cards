@@ -28,6 +28,7 @@ export type AppAction =
   | { type: 'swiped'; direction: SwipeDirection }
   | { type: 'resume-confirmed' }
   | { type: 'go-to-import' }
+  | { type: 'import-cancelled' }
   | { type: 'go-to-mode' }
   | { type: 'storage-failed' };
 
@@ -55,9 +56,13 @@ export function appReducer(state: AppState, action: AppAction): AppState {
       return {
         ...state,
         cards,
-        direction,
+        // Как и при импорте: направление на пиньинь бессмысленно без пиньиня,
+        // а сохранённое состояние могло быть записано другой версией.
+        direction: availableDirection(direction, cards),
         session: resumable ? session : null,
-        startedMode: session?.mode === 'ring' ? 'ring' : 'simple',
+        // Из session.mode режим не вывести: после колец сессия становится
+        // простой, и «Начать заново» запускало бы не тот режим.
+        startedMode: action.stored.startedMode ?? (session?.mode === 'ring' ? 'ring' : 'simple'),
         stats,
         screen: resumable ? 'resume' : 'mode',
         hydrated: true,
@@ -107,6 +112,13 @@ export function appReducer(state: AppState, action: AppAction): AppState {
 
     case 'go-to-import':
       return { ...state, screen: 'import' };
+
+    // Отмена обязана быть безвредной: сессия остаётся нетронутой,
+    // экран возвращается туда, откуда пришли.
+    case 'import-cancelled': {
+      const training = state.session !== null && !state.session.finished;
+      return { ...state, screen: training ? 'training' : 'mode' };
+    }
 
     case 'go-to-mode':
       return { ...state, session: null, screen: 'mode' };

@@ -1,6 +1,6 @@
-import { fireEvent, screen } from '@testing-library/react';
+import { act, fireEvent, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import TrainingScreen from '@/screens/TrainingScreen';
+import TrainingScreen, { EXIT_DURATION } from '@/screens/TrainingScreen';
 import { renderWithProvider } from '@/test/render';
 import { initialState } from '@/state/appReducer';
 import type { AppState } from '@/state/appReducer';
@@ -26,6 +26,15 @@ function trainingState(mode: 'simple' | 'ring' = 'simple'): AppState {
 // Фейковые таймеры здесь не используются: userEvent с ними намертво зависает
 // в этой связке версий. Ожидание через findBy* заодно развязывает тесты
 // с точной длительностью анимации ухода карточки.
+
+/** Свайп клавишей с промоткой анимации. Без userEvent: он несовместим
+ *  с фейковыми таймерами в этой связке версий. */
+function swipeWithTimers(key: string) {
+  fireEvent.keyDown(window, { key });
+  act(() => {
+    vi.advanceTimersByTime(EXIT_DURATION + 10);
+  });
+}
 
 describe('TrainingScreen', () => {
   it('показывает лицевую сторону текущей карточки', () => {
@@ -118,6 +127,34 @@ describe('TrainingScreen', () => {
     // Отдельный вызов: обработчик клавиш переподписывается только после рендера.
     fireEvent.keyDown(window, { key: 'ArrowRight' });
     expect(screen.getByText('你好')).toBeInTheDocument();
+  });
+
+  it('баннер смены круга исчезает, даже если свайпнуть снова', () => {
+    vi.useFakeTimers();
+    try {
+      renderWithProvider(<TrainingScreen />, trainingState());
+
+      // Влево, вправо, вправо — круг закрыт с ошибкой, начинается круг 2.
+      swipeWithTimers('ArrowLeft');
+      swipeWithTimers('ArrowRight');
+      swipeWithTimers('ArrowRight');
+      expect(screen.getByText('Круг 2')).toBeInTheDocument();
+
+      // Свайп внутри того же круга раньше, чем баннер успел погаснуть.
+      swipeWithTimers('ArrowRight');
+      act(() => {
+        vi.advanceTimersByTime(3000);
+      });
+
+      expect(screen.queryByText('Круг 2')).not.toBeInTheDocument();
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it('показывает выход, если карточка сессии не найдена', () => {
+    renderWithProvider(<TrainingScreen />, { ...trainingState(), cards: [] });
+    expect(screen.getByRole('button', { name: 'В меню' })).toBeInTheDocument();
   });
 
   it('учитывает направление при отрисовке', () => {

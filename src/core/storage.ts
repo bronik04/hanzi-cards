@@ -1,6 +1,6 @@
 import { DIRECTIONS } from '@/core/deck';
 import type { Card, Direction } from '@/core/deck';
-import type { Session } from '@/core/session';
+import type { Session, SessionMode } from '@/core/session';
 
 export const STORAGE_KEY = 'flashcards.v2';
 export const STORAGE_VERSION = 2;
@@ -13,6 +13,9 @@ export type StoredState = {
   direction: Direction;
   session: Session | null;
   stats: Stats;
+  /** Режим, которым сессия была запущена. Необязателен: состояния, записанные
+   *  до появления поля, должны оставаться читаемыми. */
+  startedMode?: SessionMode;
 };
 
 /** Минимальный контракт хранилища. localStorage ему удовлетворяет. */
@@ -96,14 +99,34 @@ function isStats(value: unknown): value is Stats {
 }
 
 function isStoredState(value: unknown): value is StoredState {
-  return (
-    isRecord(value) &&
-    value.version === STORAGE_VERSION &&
-    Array.isArray(value.cards) &&
-    value.cards.every(isCard) &&
-    typeof value.direction === 'string' &&
-    DIRECTIONS.includes(value.direction as Direction) &&
-    (value.session === null || isSession(value.session)) &&
-    isStats(value.stats)
-  );
+  if (
+    !isRecord(value) ||
+    value.version !== STORAGE_VERSION ||
+    !Array.isArray(value.cards) ||
+    !value.cards.every(isCard) ||
+    typeof value.direction !== 'string' ||
+    !DIRECTIONS.includes(value.direction as Direction) ||
+    !isStats(value.stats)
+  ) {
+    return false;
+  }
+
+  if (value.startedMode !== undefined && value.startedMode !== 'simple' && value.startedMode !== 'ring') {
+    return false;
+  }
+
+  if (value.session === null) return true;
+  if (!isSession(value.session)) return false;
+
+  // Сессия, ссылающаяся на отсутствующую карточку, даёт экран тренировки
+  // без карточки и без единой кнопки. Такое состояние лучше отвергнуть
+  // здесь, чем показывать пользователю пустую страницу.
+  const known = new Set(value.cards.map((card) => card.id));
+  return sessionCardIds(value.session).every((id) => known.has(id));
+}
+
+function sessionCardIds(session: Session): string[] {
+  return session.mode === 'ring'
+    ? [...session.queue, ...session.blocks.flat()]
+    : [...session.queue, ...session.nextRound];
 }

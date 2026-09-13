@@ -1,6 +1,6 @@
 import { useState } from 'react';
-import { plural } from '@/core/plural';
-import type { Session } from '@/core/session';
+import { cardsCount } from '@/core/plural';
+import { stageLabel } from '@/core/session';
 import { useAppDispatch, useAppState } from '@/state/AppContext';
 
 export default function ResumeScreen() {
@@ -14,7 +14,7 @@ export default function ResumeScreen() {
     <section className="screen">
       <h1>Продолжить тренировку?</h1>
       <p className="resume__info">
-        {`${cards.length} ${plural(cards.length, ['карточка', 'карточки', 'карточек'])} · ${stageLabel(session)}`}
+        {`${cardsCount(cards.length)} · ${stageLabel(session)}`}
       </p>
 
       {confirming ? (
@@ -45,11 +45,4 @@ export default function ResumeScreen() {
       )}
     </section>
   );
-}
-
-function stageLabel(session: Session): string {
-  if (session.mode === 'ring') {
-    return `Блок ${session.blockIndex + 1} из ${session.blocks.length}`;
-  }
-  return session.finalRound ? 'Сводный круг' : `Круг ${session.round}`;
 }

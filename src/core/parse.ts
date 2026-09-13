@@ -1,11 +1,12 @@
-import type { Card } from '@/core/deck';
-import { newId } from '@/core/id';
+import type { ParsedCard } from '@/core/deck';
 import { normalizePinyin } from '@/core/pinyin';
 
 export type ColumnMode = 'auto' | 'three' | 'two';
 
 export type ParseResult = {
-  cards: Card[];
+  /** Без идентификаторов: разбор идёт на каждое нажатие клавиши и должен быть
+   *  детерминированным и дешёвым. Идентификаторы выдаёт assignIds при импорте. */
+  cards: ParsedCard[];
   addedCount: number;
   skippedCount: number;
 };
@@ -49,7 +50,7 @@ export function parseTable(text: string, columnMode: ColumnMode = 'auto'): Parse
     body.splice(body.indexOf(firstNonEmpty), 1);
   }
 
-  const cards: Card[] = [];
+  const cards: ParsedCard[] = [];
   let skippedCount = 0;
 
   for (const line of body) {
@@ -80,7 +81,7 @@ function joinRest(cells: string[], delimiter: string): string {
     .trim();
 }
 
-function buildCard(cells: string[], delimiter: string, columnMode: ColumnMode): Card | null {
+function buildCard(cells: string[], delimiter: string, columnMode: ColumnMode): ParsedCard | null {
   if (cells.length < 2) return null;
 
   const hanzi = cells[0] ?? '';
@@ -94,5 +95,5 @@ function buildCard(cells: string[], delimiter: string, columnMode: ColumnMode): 
   const translation = joinRest(cells.slice(secondIsPinyin ? 2 : 1), delimiter);
 
   if (hanzi === '' || translation === '') return null;
-  return { id: newId(), hanzi, pinyin, translation };
+  return { hanzi, pinyin, translation };
 }

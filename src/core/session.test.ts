@@ -1,4 +1,11 @@
-import { createSession, currentCardId, ringProgress, roundProgress, swipe } from '@/core/session';
+import {
+  createSession,
+  currentCardId,
+  ringProgress,
+  roundProgress,
+  stageLabel,
+  swipe,
+} from '@/core/session';
 import type { RingSession, SimpleSession, Session, SwipeDirection } from '@/core/session';
 
 const ids = (count: number) => Array.from({ length: count }, (_, i) => `c${i + 1}`);
@@ -105,5 +112,20 @@ describe('режим колец', () => {
 
   it('пустая колода сразу завершена', () => {
     expect(createSession([], 'ring').finished).toBe(true);
+  });
+});
+
+describe('stageLabel', () => {
+  it('простой режим — номер круга', () => {
+    expect(stageLabel(createSession(ids(2), 'simple'))).toBe('Круг 1');
+  });
+
+  it('кольца — номер блока из общего числа', () => {
+    expect(stageLabel(createSession(ids(8), 'ring'))).toBe('Блок 1 из 2');
+  });
+
+  it('сводный круг после колец назван отдельно', () => {
+    const afterRings = swipeAll(createSession(ids(8), 'ring'), 'right', 8);
+    expect(stageLabel(afterRings)).toBe('Сводный круг');
   });
 });

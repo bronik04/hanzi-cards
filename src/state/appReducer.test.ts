@@ -81,6 +81,7 @@ describe('restore', () => {
     direction: 'translation-to-hanzi',
     session,
     stats: { known: 3, unknown: 1 },
+    startedMode: 'simple',
   });
 
   it('незавершённая сессия ведёт на экран возобновления', () => {
@@ -98,6 +99,26 @@ describe('restore', () => {
   it('без сессии ведёт на выбор режима', () => {
     const state = appReducer(initialState, { type: 'restore', stored: stored(null) });
     expect(state.screen).toBe('mode');
+  });
+
+  it('исправляет направление, если пиньиня в колоде нет', () => {
+    const state = appReducer(initialState, {
+      type: 'restore',
+      stored: { ...stored(null), cards: cardsWithoutPinyin, direction: 'hanzi-to-pinyin' },
+    });
+    expect(state.direction).toBe('hanzi-to-translation');
+  });
+
+  it('берёт startedMode из хранилища, а не из режима сессии', () => {
+    const finalRound: SimpleSession = {
+      mode: 'simple', round: 1, queue: ['c1'], nextRound: [],
+      perfectRound: true, finalRound: true, finished: false,
+    };
+    const state = appReducer(initialState, {
+      type: 'restore',
+      stored: { ...stored(finalRound), startedMode: 'ring' },
+    });
+    expect(state.startedMode).toBe('ring');
   });
 
   it('пустая колода ведёт на импорт', () => {
@@ -138,6 +159,30 @@ describe('навигация', () => {
   it('direction-changed меняет направление', () => {
     const state = appReducer(withDeck(), { type: 'direction-changed', direction: 'hanzi-to-pinyin' });
     expect(state.direction).toBe('hanzi-to-pinyin');
+  });
+
+  it('отмена импорта возвращает к тренировке, не трогая сессию', () => {
+    const started = appReducer(withDeck(), { type: 'session-started', mode: 'simple' });
+    const onImport = appReducer(started, { type: 'go-to-import' });
+    const cancelled = appReducer(onImport, { type: 'import-cancelled' });
+    expect(cancelled.screen).toBe('training');
+    expect(cancelled.session).toBe(started.session);
+  });
+
+  it('отмена импорта без сессии ведёт на выбор режима', () => {
+    const cancelled = appReducer(
+      appReducer(withDeck(), { type: 'go-to-import' }),
+      { type: 'import-cancelled' },
+    );
+    expect(cancelled.screen).toBe('mode');
+  });
+
+  it('отмена импорта после завершённой сессии ведёт на выбор режима', () => {
+    let state = appReducer(withDeck(), { type: 'session-started', mode: 'simple' });
+    state = appReducer(state, { type: 'swiped', direction: 'right' });
+    state = appReducer(state, { type: 'swiped', direction: 'right' });
+    state = appReducer(state, { type: 'go-to-import' });
+    expect(appReducer(state, { type: 'import-cancelled' }).screen).toBe('mode');
   });
 
   it('storage-failed поднимает флаг', () => {

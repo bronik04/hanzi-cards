@@ -39,6 +39,11 @@ describe('normalizePinyin', () => {
     expect(normalizePinyin('hui2')).toBe('huí');
   });
 
+  it('не считает тоном цифру в слоге без гласной', () => {
+    expect(normalizePinyin('HSK4')).toBe('HSK4');
+    expect(normalizePinyin('n5')).toBe('n5');
+  });
+
   it('не трогает латиницу без цифры тона', () => {
     expect(normalizePinyin('very good')).toBe('very good');
   });

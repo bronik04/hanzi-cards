@@ -1,5 +1,5 @@
 import { DIRECTIONS, DIRECTION_LABELS, hasPinyin } from '@/core/deck';
-import { plural } from '@/core/plural';
+import { cardsCount } from '@/core/plural';
 import { useAppDispatch, useAppState } from '@/state/AppContext';
 
 export default function ModeScreen() {
@@ -10,7 +10,7 @@ export default function ModeScreen() {
   return (
     <section className="screen">
       <h1>
-        {`Колода готова: ${cards.length} ${plural(cards.length, ['карточка', 'карточки', 'карточек'])}`}
+        {`Колода готова: ${cardsCount(cards.length)}`}
       </h1>
 
       <fieldset className="mode__directions">

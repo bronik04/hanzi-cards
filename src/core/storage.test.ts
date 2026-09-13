@@ -28,6 +28,7 @@ const valid: StoredState = {
     finished: false,
   },
   stats: { known: 0, unknown: 0 },
+  startedMode: 'simple',
 };
 
 describe('saveState и loadState', () => {
@@ -107,5 +108,47 @@ describe('deserialize', () => {
 
   it('принимает состояние без активной сессии', () => {
     expect(deserialize(JSON.stringify({ ...valid, session: null }))).not.toBeNull();
+  });
+});
+
+describe('deserialize: связь сессии с колодой', () => {
+  it('отвергает сессию, ссылающуюся на отсутствующую карточку', () => {
+    const orphan = {
+      ...valid,
+      session: { ...valid.session, queue: ['нет-такой-карточки'] },
+    };
+    expect(deserialize(JSON.stringify(orphan))).toBeNull();
+  });
+
+  it('отвергает блок колец с отсутствующей карточкой', () => {
+    const orphan = {
+      ...valid,
+      session: {
+        mode: 'ring',
+        blocks: [['c1'], ['призрак']],
+        blockIndex: 0,
+        queue: ['c1'],
+        finished: false,
+      },
+    };
+    expect(deserialize(JSON.stringify(orphan))).toBeNull();
+  });
+
+  it('принимает сессию, все карточки которой есть в колоде', () => {
+    expect(deserialize(JSON.stringify(valid))).not.toBeNull();
+  });
+});
+
+describe('startedMode', () => {
+  it('сохраняется и читается', () => {
+    const storage = memoryStorage();
+    saveState(storage, { ...valid, startedMode: 'ring' });
+    expect(loadState(storage)?.startedMode).toBe('ring');
+  });
+
+  it('состояние без startedMode остаётся читаемым', () => {
+    const withoutMode: Record<string, unknown> = { ...valid };
+    delete withoutMode.startedMode;
+    expect(deserialize(JSON.stringify(withoutMode))).not.toBeNull();
   });
 });

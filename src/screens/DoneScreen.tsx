@@ -1,4 +1,4 @@
-import { plural } from '@/core/plural';
+import { cardsCount } from '@/core/plural';
 import { useAppDispatch, useAppState } from '@/state/AppContext';
 
 export default function DoneScreen() {
@@ -9,7 +9,7 @@ export default function DoneScreen() {
     <section className="screen">
       <h1>Готово</h1>
       <p className="done__info">
-        {`${cards.length} ${plural(cards.length, ['карточка', 'карточки', 'карточек'])}`}
+        {cardsCount(cards.length)}
       </p>
       <p className="done__stats">{`Знаю: ${stats.known} · Не знаю: ${stats.unknown}`}</p>
 

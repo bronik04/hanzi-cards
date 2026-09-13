@@ -1,4 +1,4 @@
-import { plural } from '@/core/plural';
+import { cardsCount, plural } from '@/core/plural';
 
 const CARDS: [string, string, string] = ['карточка', 'карточки', 'карточек'];
 
@@ -18,5 +18,13 @@ describe('plural', () => {
     expect(plural(5, CARDS)).toBe('карточек');
     expect(plural(11, CARDS)).toBe('карточек');
     expect(plural(112, CARDS)).toBe('карточек');
+  });
+});
+
+describe('cardsCount', () => {
+  it('склеивает число со склонённым словом', () => {
+    expect(cardsCount(1)).toBe('1 карточка');
+    expect(cardsCount(2)).toBe('2 карточки');
+    expect(cardsCount(8)).toBe('8 карточек');
   });
 });

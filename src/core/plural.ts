@@ -9,3 +9,8 @@ export function plural(count: number, forms: [string, string, string]): string {
   if (last === 1) return forms[0];
   return forms[2];
 }
+
+/** «1 карточка», «2 карточки», «8 карточек» — повторялось в четырёх экранах. */
+export function cardsCount(count: number): string {
+  return `${count} ${plural(count, ['карточка', 'карточки', 'карточек'])}`;
+}

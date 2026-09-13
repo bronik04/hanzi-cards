@@ -4,7 +4,7 @@ import Counters from '@/components/Counters';
 import RingProgress from '@/components/RingProgress';
 import SimpleProgress from '@/components/SimpleProgress';
 import { backFace, frontFace } from '@/core/deck';
-import { currentCardId, ringProgress, roundProgress } from '@/core/session';
+import { currentCardId, ringProgress, roundProgress, stageLabel } from '@/core/session';
 import type { Session, SwipeDirection } from '@/core/session';
 import { useSwipeGesture } from '@/hooks/useSwipeGesture';
 import { useAppDispatch, useAppState } from '@/state/AppContext';
@@ -70,15 +70,36 @@ export default function TrainingScreen() {
   const [banner, setBanner] = useState('');
   const previousStage = useRef(stageKey);
 
+  // Зависимости — только строки, а не объект сессии. Сессия становится новым
+  // объектом после каждого свайпа, и эффект перезапускался бы, гася таймер
+  // баннера и не заводя новый: баннер висел бы до следующей смены круга.
+  // stageName меняется ровно тогда же, когда stageKey, так что это тот же ключ.
+  const stageName = session === null ? '' : stageLabel(session);
+
   useEffect(() => {
-    if (session === null || previousStage.current === stageKey) return;
+    if (stageName === '' || previousStage.current === stageKey) return;
     previousStage.current = stageKey;
-    setBanner(stageLabel(session));
+    setBanner(stageName);
     const timer = window.setTimeout(() => setBanner(''), BANNER_DURATION);
     return () => window.clearTimeout(timer);
-  }, [stageKey, session]);
+  }, [stageKey, stageName]);
 
-  if (session === null || card === undefined) return null;
+  if (session === null) return null;
+
+  // Сессия ссылается на карточку, которой нет в колоде. Хранилище такие
+  // состояния отвергает, но показать пустую страницу без выхода нельзя ни при
+  // каких обстоятельствах.
+  if (card === undefined) {
+    return (
+      <section className="screen">
+        <h1>Тренировка прервана</h1>
+        <p className="training__progress">Карточка не найдена в колоде.</p>
+        <button type="button" className="btn" onClick={() => dispatch({ type: 'go-to-mode' })}>
+          В меню
+        </button>
+      </section>
+    );
+  }
 
   return (
     <section className="screen screen--training">
@@ -155,17 +176,7 @@ function stageKeyOf(session: Session): string {
     : `round-${session.round}-${String(session.finalRound)}`;
 }
 
-function stageLabel(session: Session): string {
-  if (session.mode === 'ring') return `Блок ${session.blockIndex + 1}`;
-  if (session.finalRound) return 'Сводный круг';
-  return `Круг ${session.round}`;
-}
-
 function progressText(session: Session): string {
-  if (session.mode === 'ring') {
-    const { blockIndex, blockCount, remaining } = ringProgress(session);
-    return `Блок ${blockIndex + 1} из ${blockCount} · осталось ${remaining}`;
-  }
-  const stage = session.finalRound ? 'Сводный круг' : `Круг ${session.round}`;
-  return `${stage} · осталось ${session.queue.length}`;
+  const remaining = session.mode === 'ring' ? ringProgress(session).remaining : session.queue.length;
+  return `${stageLabel(session)} · осталось ${remaining}`;
 }

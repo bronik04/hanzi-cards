@@ -43,6 +43,7 @@ export function usePersistence(
       direction: state.direction,
       session: state.session,
       stats: state.stats,
+      startedMode: state.startedMode,
     });
     if (!saved && !state.storageFailed) {
       dispatch({ type: 'storage-failed' });
@@ -53,6 +54,7 @@ export function usePersistence(
     state.direction,
     state.session,
     state.stats,
+    state.startedMode,
     state.storageFailed,
     dispatch,
     storage,

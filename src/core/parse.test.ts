@@ -38,11 +38,12 @@ describe('parseTable: три колонки', () => {
     expect(result.cards[0]).toMatchObject({ hanzi: '你好', pinyin: 'nǐ hǎo', translation: 'привет' });
   });
 
-  it('присваивает каждой карточке идентификатор', () => {
-    const result = parseTable('你好\tni3 hao3\tпривет\n谢谢\txie4xie5\tспасибо');
-    const ids = result.cards.map((card) => card.id);
-    expect(new Set(ids).size).toBe(2);
-    expect(ids.every((id) => id.length > 0)).toBe(true);
+  it('не выдаёт идентификаторы: разбор детерминирован', () => {
+    const table = '你好\tni3 hao3\tпривет\n谢谢\txie4xie5\tспасибо';
+    // Разбор идёт на каждое нажатие клавиши, поэтому генерация UUID здесь
+    // была бы чистой тратой; идентификаторы присваиваются один раз при импорте.
+    expect(parseTable(table)).toEqual(parseTable(table));
+    expect(parseTable(table).cards[0]).not.toHaveProperty('id');
   });
 });
 

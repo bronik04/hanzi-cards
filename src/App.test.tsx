@@ -15,6 +15,16 @@ function memoryStorage(initial: Record<string, string> = {}) {
   return { storage, data };
 }
 
+
+// App рендерит UpdatePrompt, а виртуальный модуль существует только в сборке Vite.
+vi.mock('virtual:pwa-register/react', () => ({
+  useRegisterSW: () => ({
+    needRefresh: [false, vi.fn()],
+    offlineReady: [false, vi.fn()],
+    updateServiceWorker: vi.fn(),
+  }),
+}));
+
 const TABLE = '你好\tni3 hao3\tпривет\n谢谢\txie4xie5\tспасибо';
 
 async function importDeck(user: ReturnType<typeof userEvent.setup>) {

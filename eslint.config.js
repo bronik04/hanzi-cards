@@ -33,6 +33,15 @@ export default tseslint.config(
     },
   },
   {
+    // Служебные скрипты сборки: чистый Node, без браузерных глобальных переменных.
+    files: ['scripts/**/*.{js,mjs}'],
+    languageOptions: {
+      ecmaVersion: 2022,
+      sourceType: 'module',
+      globals: { ...globals.node },
+    },
+  },
+  {
     // Машинная проверка границы слоёв: критерий 9 из спека.
     files: ['src/core/**/*.ts'],
     ignores: ['src/core/**/*.test.ts'],

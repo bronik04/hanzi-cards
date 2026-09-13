@@ -1,3 +1,4 @@
+import UpdatePrompt from '@/components/UpdatePrompt';
 import type { StorageLike } from '@/core/storage';
 import { browserStorage, usePersistence } from '@/hooks/usePersistence';
 import DoneScreen from '@/screens/DoneScreen';
@@ -28,6 +29,7 @@ function Screens({ storage }: { storage: StorageLike | null }) {
 
   return (
     <>
+      <UpdatePrompt />
       {state.storageFailed && (
         <p className="warning" role="status">
           Прогресс не сохраняется: браузер не разрешает запись.

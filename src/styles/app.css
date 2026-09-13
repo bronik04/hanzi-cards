@@ -192,3 +192,116 @@
   gap: var(--gap);
   justify-content: center;
 }
+
+.screen--training {
+  justify-content: flex-start;
+  padding-top: 2vh;
+}
+
+.training__header {
+  display: flex;
+  align-items: center;
+  gap: var(--gap);
+  width: var(--card-width);
+}
+
+.training__progress {
+  margin: 0;
+  color: var(--text-muted);
+}
+
+.icon-btn {
+  font: inherit;
+  font-size: 1.5rem;
+  line-height: 1;
+  width: 2.25rem;
+  height: 2.25rem;
+  border: none;
+  border-radius: 50%;
+  background: var(--surface-raised);
+  color: var(--text);
+  cursor: pointer;
+}
+
+.progress {
+  width: var(--card-width);
+  height: 6px;
+  border-radius: 3px;
+  background: var(--surface);
+  overflow: hidden;
+}
+
+.progress__fill {
+  height: 100%;
+  background: var(--accent);
+  transition: width 200ms ease;
+}
+
+.segments {
+  display: flex;
+  gap: 4px;
+  width: var(--card-width);
+}
+
+.segment {
+  flex: 1;
+  height: 6px;
+  border-radius: 3px;
+  background: var(--surface);
+}
+
+.segment--done {
+  background: var(--yes);
+}
+
+.segment--active {
+  background: var(--accent);
+}
+
+.counters {
+  display: flex;
+  gap: var(--gap);
+}
+
+.counter {
+  min-width: 2.5rem;
+  padding: 0.25rem 0.75rem;
+  border-radius: 999px;
+  background: var(--surface);
+  font-variant-numeric: tabular-nums;
+}
+
+.counter--yes {
+  color: var(--yes);
+}
+
+.counter--no {
+  color: var(--no);
+}
+
+.training__banner {
+  margin: 0;
+  color: var(--accent);
+  font-size: 1.125rem;
+}
+
+.training__buttons {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--gap);
+  justify-content: center;
+}
+
+.training__confirm {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--gap);
+  padding: 0.75rem var(--gap);
+  border-radius: var(--radius);
+  background: var(--surface-raised);
+}
+
+.training__confirm p {
+  margin: 0;
+}

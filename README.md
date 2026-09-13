@@ -8,6 +8,9 @@
 
 ## Разработка
 
+Нужен Node версии из `.nvmrc` (24) или новее: `jsdom` и `vitest` не
+работают на Node 20.
+
 ```bash
 npm install
 npm run dev

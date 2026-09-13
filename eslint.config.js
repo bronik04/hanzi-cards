@@ -11,10 +11,6 @@ export default tseslint.config(
       'coverage',
       'playwright-report',
       'test-results',
-      // Файлы прототипа: удаляются в задаче 19 вместе с этими строками.
-      'main.js',
-      'deck.js',
-      'deck.test.js',
     ],
   },
   js.configs.recommended,

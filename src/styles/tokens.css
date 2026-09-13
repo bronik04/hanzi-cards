@@ -1,0 +1,38 @@
+:root {
+  color-scheme: dark;
+
+  --bg: #0a092d;
+  --surface: #2e3856;
+  --surface-raised: #3a4a6b;
+  --text: #f6f7fb;
+  --text-muted: #a0a8c0;
+  --accent: #4255ff;
+  --yes: #3ccf91;
+  --no: #ff5a5f;
+
+  --radius: 16px;
+  --gap: 1rem;
+
+  --font-ui: system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+  /* Только системные шрифты: веб-шрифт для CJK весит мегабайты и сломает офлайн. */
+  --font-hanzi: 'PingFang SC', 'Noto Sans SC', 'Microsoft YaHei', sans-serif;
+
+  --size-hanzi: clamp(4rem, 18vh, 12rem);
+  --size-translation: clamp(1.5rem, 5vh, 3rem);
+  --size-pinyin: clamp(1.25rem, 4vh, 2.5rem);
+  --size-tertiary: clamp(1rem, 2.5vh, 1.5rem);
+
+  --card-width: min(90vw, 60rem);
+  --card-height: min(60vh, 34rem);
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--text);
+  font-family: var(--font-ui);
+}

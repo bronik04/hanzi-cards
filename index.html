@@ -1,0 +1,361 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Карточки</title>
+<style>
+  :root {
+    --bg: #12142e;
+    --bg-elevated: #1d2050;
+    --bg-track: #2b2f66;
+    --border-subtle: #383c78;
+    --text: #f4f5fb;
+    --text-dim: #9ea3c7;
+    --accent: #4a5cf0;
+    --accent-active: #5d6ef5;
+    --know: #22c58a;
+    --unknown: #ef4444;
+  }
+
+  * { box-sizing: border-box; }
+
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    margin: 0;
+    min-height: 100vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 2.5rem 1.25rem;
+  }
+
+  button, textarea { font-family: inherit; }
+
+  #app { width: 100%; display: flex; justify-content: center; }
+
+  [hidden] { display: none !important; }
+
+  :focus-visible {
+    outline: 3px solid var(--accent-active);
+    outline-offset: 2px;
+  }
+
+  .screen {
+    width: 100%;
+    max-width: 620px;
+    margin: 0 auto;
+    padding: clamp(1.75rem, 3vw, 2.75rem);
+    background: var(--bg-elevated);
+    border-radius: 28px;
+    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.35);
+    text-align: center;
+  }
+
+  .screen h1 {
+    font-size: clamp(1.35rem, 2.2vw, 1.85rem);
+    font-weight: 800;
+    margin: 0 0 1.5rem;
+    line-height: 1.3;
+  }
+
+  .screen p { color: var(--text-dim); line-height: 1.5; }
+
+  textarea {
+    width: 100%;
+    height: 220px;
+    font-family: ui-monospace, "SF Mono", Menlo, monospace;
+    font-size: 0.95rem;
+    padding: 1rem;
+    background: var(--bg-track);
+    color: var(--text);
+    border: 1px solid var(--border-subtle);
+    border-radius: 14px;
+    resize: vertical;
+  }
+
+  textarea::placeholder { color: var(--text-dim); }
+
+  .btn {
+    display: inline-block;
+    margin: 6px;
+    padding: 0.95rem 1.75rem;
+    font-size: 1.05rem;
+    font-weight: 700;
+    cursor: pointer;
+    border: none;
+    border-radius: 16px;
+    background: var(--accent);
+    color: #fff;
+    transition: background 0.15s ease, transform 0.1s ease;
+  }
+
+  .btn:hover { background: var(--accent-active); }
+  .btn:active { transform: scale(0.98); }
+
+  .btn-stack { display: flex; flex-direction: column; gap: 0.25rem; margin-top: 0.5rem; }
+
+  button.link-button {
+    background: none;
+    color: var(--text-dim);
+    text-decoration: underline;
+    font-weight: 500;
+    font-size: 0.9rem;
+    padding: 6px;
+    margin-top: 0.75rem;
+    cursor: pointer;
+    border: none;
+  }
+
+  button.link-button:hover { color: var(--text); }
+
+  /* Training screen */
+  .screen-training { max-width: 760px; text-align: initial; }
+
+  .training-topbar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 1.5rem;
+  }
+
+  .icon-btn {
+    width: 44px;
+    height: 44px;
+    flex: 0 0 44px;
+    border-radius: 50%;
+    background: var(--bg-track);
+    color: var(--text);
+    font-size: 1.4rem;
+    line-height: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border: none;
+    cursor: pointer;
+    padding: 0;
+    margin: 0;
+  }
+
+  .icon-btn:hover { background: var(--border-subtle); }
+
+  .topbar-spacer { width: 44px; height: 44px; flex: 0 0 44px; }
+
+  .training-progress-text {
+    color: var(--text-dim);
+    font-weight: 700;
+    font-size: 1rem;
+    letter-spacing: 0.02em;
+    text-align: center;
+  }
+
+  .training-counters {
+    display: flex;
+    justify-content: space-between;
+    margin-bottom: 1.25rem;
+  }
+
+  .counter-pill {
+    min-width: 2.75rem;
+    padding: 0.4rem 0.9rem;
+    border-radius: 999px;
+    font-weight: 800;
+    font-size: 1.05rem;
+    text-align: center;
+    border: 2px solid;
+    background: transparent;
+  }
+
+  .counter-unknown { color: var(--unknown); border-color: var(--unknown); }
+  .counter-known { color: var(--know); border-color: var(--know); }
+
+  .progress-track {
+    height: 6px;
+    background: var(--bg-track);
+    border-radius: 999px;
+    overflow: hidden;
+    margin-bottom: 2rem;
+  }
+
+  .progress-fill {
+    height: 100%;
+    width: 0%;
+    background: var(--accent);
+    border-radius: 999px;
+    transition: width 0.25s ease;
+  }
+
+  .progress-segments {
+    display: flex;
+    gap: 6px;
+    margin-bottom: 2rem;
+  }
+
+  .segment {
+    flex: 1;
+    height: 6px;
+    background: var(--bg-track);
+    border-radius: 999px;
+    overflow: hidden;
+  }
+
+  .segment-fill {
+    height: 100%;
+    width: 0%;
+    background: var(--accent);
+    border-radius: 999px;
+    transition: width 0.25s ease;
+  }
+
+  .training-banner {
+    background: rgba(74, 92, 240, 0.18);
+    border: 1px solid var(--accent);
+    color: var(--text);
+    padding: 0.85rem 1.1rem;
+    border-radius: 14px;
+    margin-bottom: 1.5rem;
+    font-weight: 600;
+    text-align: center;
+  }
+
+  .card {
+    width: 100%;
+    min-height: clamp(260px, 42vh, 420px);
+    margin: 0 auto 2rem;
+    perspective: 1000px;
+    cursor: pointer;
+    touch-action: none;
+    user-select: none;
+  }
+
+  .card-inner {
+    position: relative;
+    width: 100%;
+    height: 100%;
+    min-height: inherit;
+    transition: transform 0.4s;
+    transform-style: preserve-3d;
+  }
+
+  .card.flipped .card-inner { transform: rotateY(180deg); }
+
+  .card-face {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+    font-size: clamp(1.8rem, 4vw, 2.75rem);
+    font-weight: 700;
+    border-radius: 22px;
+    background: var(--bg-track);
+    border: 2px solid transparent;
+    backface-visibility: hidden;
+    padding: 2rem;
+    transition: border-color 0.15s ease;
+  }
+
+  .card-back { transform: rotateY(180deg); font-size: clamp(1.3rem, 2.8vw, 1.9rem); font-weight: 600; }
+
+  .card.dragging-right .card-face { border-color: var(--know); }
+  .card.dragging-left .card-face { border-color: var(--unknown); }
+
+  .training-controls {
+    display: flex;
+    gap: 1rem;
+    margin-bottom: 0.5rem;
+  }
+
+  .training-controls .btn { flex: 1; margin: 0; }
+
+  .training-footer { text-align: center; }
+
+  @media (prefers-reduced-motion: reduce) {
+    * { transition: none !important; animation: none !important; }
+  }
+</style>
+</head>
+<body>
+  <div id="app">
+
+    <section id="screen-resume" class="screen" hidden>
+      <h1>Найдена сохранённая колода</h1>
+      <p id="resume-info"></p>
+      <div class="btn-stack">
+        <button id="btn-resume-continue" class="btn">Продолжить</button>
+        <button id="btn-resume-new" class="btn">Загрузить новую</button>
+      </div>
+    </section>
+
+    <section id="screen-input" class="screen" hidden>
+      <h1>Вставьте таблицу (слово, перевод)</h1>
+      <textarea id="input-table" placeholder="кошка,cat&#10;собака,dog"></textarea>
+      <div class="input-file-row">
+        <button id="btn-choose-file" class="link-button" type="button">Или загрузить файл (.csv, .txt)</button>
+        <input id="input-file" type="file" accept=".csv,.txt,text/csv,text/plain" hidden>
+      </div>
+      <p id="input-message"></p>
+      <button id="btn-create-deck" class="btn">Создать колоду</button>
+      <div><button id="btn-cancel-input" class="link-button" type="button" hidden>Отменить</button></div>
+    </section>
+
+    <section id="screen-mode" class="screen" hidden>
+      <h1>Колода готова: <span id="mode-deck-size"></span> карточек</h1>
+      <div class="btn-stack">
+        <button id="btn-mode-simple" class="btn">Простой просмотр</button>
+        <button id="btn-mode-ring" class="btn">Заучивание кольцами по 7</button>
+      </div>
+      <div><button id="btn-mode-new-table" class="link-button">Загрузить новую таблицу</button></div>
+    </section>
+
+    <section id="screen-training" class="screen screen-training" hidden>
+      <div class="training-topbar">
+        <button id="btn-training-close" class="icon-btn" aria-label="Закрыть">×</button>
+        <div id="training-progress" class="training-progress-text"></div>
+        <div class="topbar-spacer"></div>
+      </div>
+
+      <div id="progress-simple" class="progress-track" hidden>
+        <div id="progress-simple-fill" class="progress-fill"></div>
+      </div>
+
+      <div id="progress-ring" class="progress-segments" hidden></div>
+
+      <div class="training-counters">
+        <span id="count-unknown" class="counter-pill counter-unknown">0</span>
+        <span id="count-known" class="counter-pill counter-known">0</span>
+      </div>
+
+      <p id="training-banner" class="training-banner" hidden></p>
+
+      <div id="card" class="card">
+        <div class="card-inner">
+          <div class="card-face card-front"><span id="card-front-text"></span></div>
+          <div class="card-face card-back"><span id="card-back-text"></span></div>
+        </div>
+      </div>
+
+      <div class="training-controls">
+        <button id="btn-swipe-left" class="btn">Изучать снова</button>
+        <button id="btn-swipe-right" class="btn">Знаю</button>
+      </div>
+      <div class="training-footer"><button id="btn-training-new-table" class="link-button">Загрузить новую таблицу</button></div>
+    </section>
+
+    <section id="screen-done" class="screen" hidden>
+      <h1>Колода выучена!</h1>
+      <div class="btn-stack">
+        <button id="btn-done-restart" class="btn">Начать заново</button>
+        <button id="btn-done-menu" class="btn">В меню</button>
+      </div>
+    </section>
+
+  </div>
+
+  <script src="./deck.js"></script>
+  <script src="./main.js"></script>
+</body>
+</html>

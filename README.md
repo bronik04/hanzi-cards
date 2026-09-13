@@ -32,6 +32,13 @@ npm run dev
 - `src/state` — редьюсер и контекст.
 - `src/screens`, `src/components`, `src/hooks` — слой представления.
 
+## Публикация
+
+Сайт не публикуется автоматически: GitHub Pages в репозитории не включён.
+Чтобы включить, откройте Settings → Pages, выберите Source: GitHub Actions
+и запустите workflow Deploy вручную. Он собирает приложение с
+`DEPLOY_BASE=/hanzi-cards/` — без этого пути к ассетам на Pages будут битыми.
+
 ## Документы
 
 - [Спецификация Этапа 0](docs/superpowers/specs/2026-09-12-hanzi-cards-stage0-design.md)

@@ -1,8 +1,10 @@
 name: Deploy
 
+# Только ручной запуск: GitHub Pages в репозитории не включён, и автоматический
+# запуск падал бы на каждом push. Чтобы начать публиковать — включите Pages
+# (Settings → Pages → Source: GitHub Actions) и запустите workflow вручную,
+# либо верните сюда триггер push.
 on:
-  push:
-    branches: [master]
   workflow_dispatch:
 
 permissions:

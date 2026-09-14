@@ -10,7 +10,11 @@ export default defineConfig({
   fullyParallel: true,
   forbidOnly: process.env.CI === 'true',
   retries: process.env.CI === 'true' ? 1 : 0,
-  use: { baseURL: APP_URL },
+  // Дефолтный репортёр Playwright не пишет playwright-report/, и шаг
+  // upload-artifact в CI прикладывал пустоту. Падение в CI надо чинить по
+  // отчёту: локально этот прогон может и не воспроизвестись.
+  reporter: [['list'], ['html', { open: 'never' }]],
+  use: { baseURL: APP_URL, trace: 'on-first-retry' },
   webServer: {
     // Свой outDir: обычный стенд собирает в dist/, и запущенный рядом
     // `npm run preview` иначе начал бы молча отдавать файлы с чужим base.

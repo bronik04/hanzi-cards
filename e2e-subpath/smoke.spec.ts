@@ -1,5 +1,5 @@
 import { expect, test } from '@playwright/test';
-import { serviceWorkerActive } from '../e2e/fixtures';
+import { SHORT_TABLE, serviceWorkerActive, serviceWorkerControlling } from '../e2e/fixtures';
 import { APP_URL, BASE } from './base';
 
 test('приложение под подпутём грузится без ответов 4xx', async ({ page }) => {
@@ -60,4 +60,21 @@ test('service worker зарегистрирован со scope подпути', 
   // именно scope решает, какие навигации service worker вообще перехватывает.
   expect(registration.scope).toBe(APP_URL);
   expect(registration.scriptURL).toBe(`${APP_URL}sw.js`);
+});
+
+// Без промежуточной перезагрузки, как и в e2e/offline.spec.ts: она
+// замаскировала бы регресс clientsClaim — тест проходил бы и без него.
+// Под подпутём проверка вдобавок ловит прекеш: workbox прерывает установку
+// service worker, если хоть один URL прекеша ответил 404.
+test('приложение под подпутём работает без сети с первого визита', async ({ page, context }) => {
+  await page.goto('./');
+  await serviceWorkerActive(page);
+  await serviceWorkerControlling(page);
+
+  await context.setOffline(true);
+  await page.reload();
+
+  await expect(page.getByRole('heading', { name: 'Вставьте таблицу со словами' })).toBeVisible();
+  await page.getByLabel('Таблица со словами').fill(SHORT_TABLE);
+  await expect(page.getByText('Добавлено 2 карточки')).toBeVisible();
 });

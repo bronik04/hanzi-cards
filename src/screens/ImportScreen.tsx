@@ -5,7 +5,7 @@ import { suggestedName } from '@/core/library';
 import { cardsCount, plural } from '@/core/plural';
 import { parseTable } from '@/core/parse';
 import type { ColumnMode } from '@/core/parse';
-import { useActiveDeck, useAppDispatch, useAppState } from '@/state/AppContext';
+import { useAppDispatch, useAppState } from '@/state/AppContext';
 
 const PREVIEW_LIMIT = 5;
 
@@ -17,8 +17,6 @@ const COLUMN_OPTIONS: ReadonlyArray<{ value: ColumnMode; label: string }> = [
 
 export default function ImportScreen() {
   const { decks } = useAppState();
-  const deck = useActiveDeck();
-  const session = deck?.session ?? null;
   const dispatch = useAppDispatch();
   const [text, setText] = useState('');
   const [columnMode, setColumnMode] = useState<ColumnMode>('auto');
@@ -47,10 +45,6 @@ export default function ImportScreen() {
   return (
     <section className="screen">
       <h1>Вставьте таблицу со словами</h1>
-
-      {session !== null && !session.finished && (
-        <p className="import__notice">Идёт тренировка — новая колода её заменит</p>
-      )}
 
       <textarea
         className="import__textarea"

@@ -349,10 +349,6 @@
   box-shadow: 0 8px 24px rgb(0 0 0 / 0.4);
 }
 
-.import__notice {
-  margin: 0;
-  color: var(--accent);
-}
 
 .import__error {
   margin: 0;

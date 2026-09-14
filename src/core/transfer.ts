@@ -1,7 +1,7 @@
 import { newId } from '@/core/id';
 import { uniqueName } from '@/core/library';
 import type { Deck } from '@/core/library';
-import { STORAGE_VERSION, parseDeckList, sessionCardIds } from '@/core/storage';
+import { STORAGE_VERSION, parseDeckList, sessionFitsDeck } from '@/core/storage';
 
 export type ImportResult = { ok: true; decks: Deck[] } | { ok: false; error: string };
 
@@ -49,9 +49,7 @@ export function mergeImportedDecks(existing: readonly Deck[], incoming: readonly
  * состояние целиком — там источник свой, и битая ссылка означает поломку.
  */
 function keepSessionIfWhole(deck: Deck): Deck['session'] {
-  if (deck.session === null) return null;
-  const known = new Set(deck.cards.map((card) => card.id));
-  return sessionCardIds(deck.session).every((id) => known.has(id)) ? deck.session : null;
+  return sessionFitsDeck(deck) ? deck.session : null;
 }
 
 export function exportDeckTable(deck: Deck): string {

@@ -44,7 +44,7 @@
 
 Тесты лежат рядом с модулем: `src/core/library.test.ts`, `src/screens/LibraryScreen.test.tsx` и так далее. Сквозные — в `e2e/library.spec.ts`.
 
-**Исходник макетов.** Экраны согласованы по файлу `mockups.html` в корне репозитория; он не в гите. CSS оттуда переносится в `src/styles/app.css` в задаче 5, сам файл удаляется в задаче 10.
+**Исходник макетов.** Экраны согласованы по файлу `mockups.html` в корне репозитория; он не в гите. CSS оттуда переносится в `src/styles/app.css` в задаче 5, сам файл удаляется в задаче 9.
 
 ---
 
@@ -2786,13 +2786,16 @@ Co-Authored-By: Claude Opus 5 <noreply@anthropic.com>"
 
 **Files:**
 - Create: `e2e/library.spec.ts`
-- Modify: `e2e/fixtures.ts`
+- Modify: `e2e/fixtures.ts`, `e2e/training.spec.ts`, `e2e/offline.spec.ts`, `e2e-subpath/smoke.spec.ts`
 
 **Interfaces:**
 - Consumes: `SHORT_TABLE`, `TABLE` из `./fixtures`
 - Produces: `createDeckThroughUi(page, name, table)` из `./fixtures`
 
-> **Осторожно:** ветка `subpath-e2e` из параллельной задачи тоже правит `e2e/`. При слиянии сверьте `e2e/fixtures.ts` — конфликт ожидается в списке экспортов, а не в логике.
+> **Ветка `subpath-e2e` уже слита в `master`** (коммит 5a6b0dd), и её стенд живёт в
+> отдельной папке `e2e-subpath/` со своим конфигом — конфликта с `e2e/` нет.
+> Зато этот стенд импортирует помощники из `e2e/fixtures.ts` и ходит по тем же
+> экранам, поэтому чинить его надо здесь же: шаг 3 ниже.
 
 - [ ] **Step 1: Добавить помощник в фикстуры**
 
@@ -2882,18 +2885,58 @@ test('библиотека сохраняется в файл и загружа�
 });
 ```
 
-- [ ] **Step 3: Прогнать сквозные тесты**
+- [ ] **Step 3: Починить существующие сквозные тесты**
 
-```bash
-npm run test:e2e
+До Этапа 1 первым экраном был импорт, и все три существующих файла заходят прямо на него. Теперь первый экран — библиотека, а заголовок импорта стал «Новая колода». Без этой правки задача 8 оставит ветку с красными тестами.
+
+В `e2e/training.spec.ts` и `e2e/offline.spec.ts` после каждого `page.goto('/')` добавьте переход в импорт:
+
+```ts
+await page.getByRole('button', { name: 'Добавить колоду' }).click();
 ```
 
-Ожидается: все тесты зелёные. Если `waitForEvent('download')` истекает по времени, проверьте, что в `playwright.config.ts` не выставлено `acceptDownloads: false` — по умолчанию загрузки разрешены.
+и замените все проверки заголовка импорта:
+
+```ts
+await expect(page.getByRole('heading', { name: 'Вставьте таблицу со словами' })).toBeVisible();
+```
+
+на
+
+```ts
+await expect(page.getByRole('heading', { name: 'Новая колода' })).toBeVisible();
+```
+
+В `e2e-subpath/smoke.spec.ts` первые три теста проверяют только то, что экран вообще отрисовался, — им нужен не импорт, а сам первый экран. Замените в них проверку заголовка на библиотеку и перехода в импорт не добавляйте:
+
+```ts
+await expect(page.getByRole('heading', { name: 'Мои колоды' })).toBeVisible();
+```
+
+Четвёртому тесту, «приложение под подпутём работает без сети с первого визита», переход нужен: он заполняет таблицу. После `page.reload()` дождитесь библиотеки, нажмите «Добавить колоду» и дальше по-старому:
+
+```ts
+  await context.setOffline(true);
+  await page.reload();
+
+  await expect(page.getByRole('heading', { name: 'Мои колоды' })).toBeVisible();
+  await page.getByRole('button', { name: 'Добавить колоду' }).click();
+  await page.getByLabel('Таблица со словами').fill(SHORT_TABLE);
+  await expect(page.getByText('Добавлено 2 карточки')).toBeVisible();
+```
+
+- [ ] **Step 3a: Прогнать оба стенда**
+
+```bash
+npm run test:e2e && npm run test:e2e:subpath
+```
+
+Ожидается: все тесты зелёные на обоих стендах. Если `waitForEvent('download')` истекает по времени, проверьте, что в `playwright.config.ts` не выставлено `acceptDownloads: false` — по умолчанию загрузки разрешены.
 
 - [ ] **Step 4: Коммит**
 
 ```bash
-git add e2e/library.spec.ts e2e/fixtures.ts
+git add e2e/ e2e-subpath/
 git commit -m "test: cover the deck library end to end
 
 Co-Authored-By: Claude Opus 5 <noreply@anthropic.com>"

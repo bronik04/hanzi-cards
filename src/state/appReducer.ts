@@ -1,8 +1,8 @@
 import { hasPinyin } from '@/core/deck';
 import type { Card, Direction } from '@/core/deck';
 import { createSession, swipe } from '@/core/session';
-import type { Session, SessionMode, SwipeDirection } from '@/core/session';
-import type { Stats, StoredState } from '@/core/storage';
+import type { Session, SessionMode, Stats, SwipeDirection } from '@/core/session';
+import type { StoredState } from '@/core/storage';
 
 export type Screen = 'resume' | 'import' | 'mode' | 'training' | 'done';
 

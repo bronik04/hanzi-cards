@@ -3,6 +3,9 @@ import { BLOCK_SIZE, splitIntoBlocks } from '@/core/deck';
 export type SwipeDirection = 'left' | 'right';
 export type SessionMode = 'simple' | 'ring';
 
+/** Счётчики «знаю» и «не знаю» за тренировку. */
+export type Stats = { known: number; unknown: number };
+
 export type SimpleSession = {
   mode: 'simple';
   round: number;

@@ -1,11 +1,9 @@
 import { DIRECTIONS } from '@/core/deck';
 import type { Card, Direction } from '@/core/deck';
-import type { Session, SessionMode } from '@/core/session';
+import type { Session, SessionMode, Stats } from '@/core/session';
 
 export const STORAGE_KEY = 'flashcards.v2';
 export const STORAGE_VERSION = 2;
-
-export type Stats = { known: number; unknown: number };
 
 export type StoredState = {
   version: typeof STORAGE_VERSION;

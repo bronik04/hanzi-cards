@@ -4,8 +4,12 @@ import TrainingScreen, { EXIT_DURATION } from '@/screens/TrainingScreen';
 import { renderWithProvider } from '@/test/render';
 import { initialState } from '@/state/appReducer';
 import type { AppState } from '@/state/appReducer';
+import { createDeck } from '@/core/library';
+import type { Deck } from '@/core/library';
 import type { Card } from '@/core/deck';
 import { createSession } from '@/core/session';
+
+const AT = new Date('2026-09-14T10:00:00Z');
 
 const cards: Card[] = [
   { id: 'c1', hanzi: '你好', pinyin: 'nǐ hǎo', translation: 'привет' },
@@ -13,14 +17,12 @@ const cards: Card[] = [
 ];
 
 function trainingState(mode: 'simple' | 'ring' = 'simple'): AppState {
-  return {
-    ...initialState,
-    cards,
-    hydrated: true,
-    screen: 'training',
+  const deck: Deck = {
+    ...createDeck('Тестовая колода', cards, AT),
     startedMode: mode,
     session: createSession(['c1', 'c2'], mode),
   };
+  return { ...initialState, hydrated: true, decks: [deck], activeDeckId: deck.id, screen: 'training' };
 }
 
 // Фейковые таймеры здесь не используются: userEvent с ними намертво зависает
@@ -182,14 +184,23 @@ describe('TrainingScreen', () => {
   });
 
   it('показывает выход, если карточка сессии не найдена', () => {
-    renderWithProvider(<TrainingScreen />, { ...trainingState(), cards: [] });
+    const state = trainingState();
+    const deck = state.decks[0];
+    if (deck === undefined) throw new Error('колода не собрана');
+    renderWithProvider(<TrainingScreen />, {
+      ...state,
+      decks: [{ ...deck, cards: [] }],
+    });
     expect(screen.getByRole('button', { name: 'В меню' })).toBeInTheDocument();
   });
 
   it('учитывает направление при отрисовке', () => {
+    const state = trainingState();
+    const deck = state.decks[0];
+    if (deck === undefined) throw new Error('колода не собрана');
     renderWithProvider(<TrainingScreen />, {
-      ...trainingState(),
-      direction: 'translation-to-hanzi',
+      ...state,
+      decks: [{ ...deck, direction: 'translation-to-hanzi' }],
     });
     expect(screen.getByText('привет')).toBeInTheDocument();
   });

@@ -4,6 +4,7 @@ import { usePersistence } from '@/hooks/usePersistence';
 import { STORAGE_KEY, STORAGE_VERSION } from '@/core/storage';
 import type { StorageLike, StoredState } from '@/core/storage';
 import { appReducer, initialState } from '@/state/appReducer';
+import { createDeck } from '@/core/library';
 
 function memoryStorage(initial: Record<string, string> = {}) {
   const data: Record<string, string> = { ...initial };
@@ -16,12 +17,16 @@ function memoryStorage(initial: Record<string, string> = {}) {
   return { storage, data };
 }
 
+const deck = createDeck(
+  'Юнит 1',
+  [{ id: 'c1', hanzi: '你好', pinyin: 'nǐ hǎo', translation: 'привет' }],
+  new Date('2026-09-14T10:00:00Z'),
+);
+
 const stored: StoredState = {
   version: STORAGE_VERSION,
-  cards: [{ id: 'c1', hanzi: '你好', pinyin: 'nǐ hǎo', translation: 'привет' }],
-  direction: 'hanzi-to-translation',
-  session: null,
-  stats: { known: 0, unknown: 0 },
+  decks: [deck],
+  activeDeckId: deck.id,
 };
 
 function renderWithPersistence(storage: StorageLike | null) {
@@ -36,8 +41,9 @@ describe('usePersistence', () => {
   it('восстанавливает сохранённое состояние при монтировании', () => {
     const { storage } = memoryStorage({ [STORAGE_KEY]: JSON.stringify(stored) });
     const { result } = renderWithPersistence(storage);
-    expect(result.current.cards).toHaveLength(1);
-    expect(result.current.screen).toBe('mode');
+    expect(result.current.decks).toHaveLength(1);
+    expect(result.current.activeDeckId).toBe(deck.id);
+    expect(result.current.screen).toBe('library');
     expect(result.current.hydrated).toBe(true);
   });
 
@@ -45,7 +51,7 @@ describe('usePersistence', () => {
     const { storage, data } = memoryStorage({ [STORAGE_KEY]: JSON.stringify(stored) });
     renderWithPersistence(storage);
     const written = JSON.parse(data[STORAGE_KEY] ?? '{}') as StoredState;
-    expect(written.cards).toHaveLength(1);
+    expect(written.decks).toHaveLength(1);
   });
 
   it('на пустом хранилище поднимает hydrated и остаётся на импорте', () => {

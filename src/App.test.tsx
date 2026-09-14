@@ -3,6 +3,10 @@ import userEvent from '@testing-library/user-event';
 import App from '@/App';
 import { STORAGE_KEY, STORAGE_VERSION } from '@/core/storage';
 import type { StorageLike, StoredState } from '@/core/storage';
+import { createDeck } from '@/core/library';
+import type { Deck } from '@/core/library';
+
+const AT = new Date('2026-09-14T10:00:00Z');
 
 function memoryStorage(initial: Record<string, string> = {}) {
   const data: Record<string, string> = { ...initial };
@@ -59,7 +63,7 @@ describe('App: полный цикл', () => {
     expect(screen.getByText('Знаю: 2 · Не знаю: 0')).toBeInTheDocument();
   });
 
-  it('отмена импорта возвращает в тренировку и сохраняет прогресс', async () => {
+  it('отмена импорта не трогает начатую тренировку', async () => {
     const user = userEvent.setup();
     const { storage } = memoryStorage();
     render(<App storage={storage} />);
@@ -71,25 +75,31 @@ describe('App: полный цикл', () => {
 
     await user.click(screen.getByRole('button', { name: 'Загрузить новую таблицу' }));
     await user.click(screen.getByRole('button', { name: 'Отменить' }));
+    expect(screen.getByRole('heading', { name: 'Мои колоды' })).toBeInTheDocument();
 
+    await user.click(screen.getByRole('button', { name: /карточк/ }));
+    await user.click(screen.getByRole('button', { name: 'Продолжить' }));
     expect(screen.getByText('谢谢')).toBeInTheDocument();
     expect(screen.getByTestId('count-known')).toHaveTextContent('1');
   });
 
-  it('сохранённая сессия приводит на экран возобновления', () => {
-    const stored: StoredState = {
-      version: STORAGE_VERSION,
-      cards: [{ id: 'c1', hanzi: '你好', pinyin: 'nǐ hǎo', translation: 'привет' }],
-      direction: 'hanzi-to-translation',
+  it('сохранённая сессия видна в библиотеке и открывается на возобновлении', async () => {
+    const user = userEvent.setup();
+    const deck: Deck = {
+      ...createDeck('Юнит 1', [{ id: 'c1', hanzi: '你好', pinyin: 'nǐ hǎo', translation: 'привет' }], AT),
       session: {
         mode: 'simple', round: 1, queue: ['c1'], nextRound: [],
         perfectRound: true, finalRound: false, finished: false,
       },
-      stats: { known: 0, unknown: 0 },
     };
+    const stored: StoredState = { version: STORAGE_VERSION, decks: [deck], activeDeckId: deck.id };
     const { storage } = memoryStorage({ [STORAGE_KEY]: JSON.stringify(stored) });
     render(<App storage={storage} />);
 
+    expect(screen.getByRole('heading', { name: 'Мои колоды' })).toBeInTheDocument();
+    expect(screen.getByText('тренировка не закончена', { exact: false })).toBeInTheDocument();
+
+    await user.click(screen.getByRole('button', { name: /Юнит 1/ }));
     expect(screen.getByRole('heading', { name: 'Продолжить тренировку?' })).toBeInTheDocument();
   });
 
@@ -101,9 +111,10 @@ describe('App: полный цикл', () => {
       },
     };
     render(<App storage={failing} />);
-    expect(
-      screen.getByText('Прогресс не сохраняется: браузер не разрешает запись.'),
-    ).toBeInTheDocument();
+    const warning = screen.getByText('Прогресс не сохраняется', { exact: false });
+    // Совет выгрузить библиотеку — часть предупреждения: при переполнении квоты
+    // файл остаётся единственным способом не потерять колоды.
+    expect(warning).toHaveTextContent('Сохраните библиотеку в файл, чтобы не потерять колоды.');
   });
 
   it('выбранное направление применяется к тренировке', async () => {

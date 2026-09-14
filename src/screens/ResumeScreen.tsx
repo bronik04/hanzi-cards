@@ -1,14 +1,15 @@
 import { useState } from 'react';
 import { cardsCount } from '@/core/plural';
 import { stageLabel } from '@/core/session';
-import { useAppDispatch, useAppState } from '@/state/AppContext';
+import { useActiveDeck, useAppDispatch } from '@/state/AppContext';
 
 export default function ResumeScreen() {
-  const { cards, session } = useAppState();
+  const deck = useActiveDeck();
   const dispatch = useAppDispatch();
   const [confirming, setConfirming] = useState(false);
 
-  if (session === null) return null;
+  if (deck === null || deck.session === null) return null;
+  const { cards, session } = deck;
 
   return (
     <section className="screen">

@@ -4,8 +4,12 @@ import ResumeScreen from '@/screens/ResumeScreen';
 import { renderWithProvider } from '@/test/render';
 import { initialState } from '@/state/appReducer';
 import type { AppState } from '@/state/appReducer';
+import { createDeck } from '@/core/library';
+import type { Deck } from '@/core/library';
 import type { Card } from '@/core/deck';
 import { createSession } from '@/core/session';
+
+const AT = new Date('2026-09-14T10:00:00Z');
 
 const cards: Card[] = [
   { id: 'c1', hanzi: '你好', pinyin: 'nǐ hǎo', translation: 'привет' },
@@ -13,13 +17,17 @@ const cards: Card[] = [
 ];
 
 function resumeState(mode: 'simple' | 'ring' = 'simple'): AppState {
-  return {
-    ...initialState,
-    cards,
-    hydrated: true,
-    screen: 'resume',
+  const deck: Deck = {
+    ...createDeck('Тестовая колода', cards, AT),
     startedMode: mode,
     session: createSession(['c1', 'c2'], mode),
+  };
+  return {
+    ...initialState,
+    hydrated: true,
+    decks: [deck],
+    activeDeckId: deck.id,
+    screen: 'resume',
   };
 }
 

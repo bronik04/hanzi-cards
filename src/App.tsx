@@ -3,6 +3,7 @@ import type { StorageLike } from '@/core/storage';
 import { browserStorage, usePersistence } from '@/hooks/usePersistence';
 import DoneScreen from '@/screens/DoneScreen';
 import ImportScreen from '@/screens/ImportScreen';
+import LibraryScreen from '@/screens/LibraryScreen';
 import ModeScreen from '@/screens/ModeScreen';
 import ResumeScreen from '@/screens/ResumeScreen';
 import TrainingScreen from '@/screens/TrainingScreen';
@@ -32,7 +33,8 @@ function Screens({ storage }: { storage: StorageLike | null }) {
       <UpdatePrompt />
       {state.storageFailed && (
         <p className="warning" role="status">
-          Прогресс не сохраняется: браузер не разрешает запись.
+          Прогресс не сохраняется: браузер не разрешает запись. Сохраните библиотеку в файл, чтобы
+          не потерять колоды.
         </p>
       )}
       {renderScreen(state.screen)}
@@ -42,6 +44,8 @@ function Screens({ storage }: { storage: StorageLike | null }) {
 
 function renderScreen(screen: Screen) {
   switch (screen) {
+    case 'library':
+      return <LibraryScreen />;
     case 'resume':
       return <ResumeScreen />;
     case 'import':

@@ -25,7 +25,7 @@ export function usePersistence(
     if (loadAttempted.current) return;
     loadAttempted.current = true;
 
-    const restored = storage === null ? null : loadState(storage);
+    const restored = storage === null ? null : loadState(storage, new Date());
     if (restored === null) {
       dispatch({ type: 'hydration-finished' });
       return;
@@ -34,29 +34,16 @@ export function usePersistence(
   }, [dispatch, storage]);
 
   useEffect(() => {
-    // Запись до гидратации затёрла бы сохранённое состояние пустым начальным.
+    // Запись до гидратации затёрла бы сохранённую библиотеку пустой начальной.
     if (!state.hydrated || storage === null) return;
 
     const saved = saveState(storage, {
       version: STORAGE_VERSION,
-      cards: state.cards,
-      direction: state.direction,
-      session: state.session,
-      stats: state.stats,
-      startedMode: state.startedMode,
+      decks: state.decks,
+      activeDeckId: state.activeDeckId,
     });
     if (!saved && !state.storageFailed) {
       dispatch({ type: 'storage-failed' });
     }
-  }, [
-    state.hydrated,
-    state.cards,
-    state.direction,
-    state.session,
-    state.stats,
-    state.startedMode,
-    state.storageFailed,
-    dispatch,
-    storage,
-  ]);
+  }, [state.hydrated, state.decks, state.activeDeckId, state.storageFailed, dispatch, storage]);
 }

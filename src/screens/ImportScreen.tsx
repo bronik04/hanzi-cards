@@ -1,10 +1,11 @@
 import { useMemo, useRef, useState } from 'react';
 import type { ChangeEvent } from 'react';
 import { assignIds } from '@/core/deck';
+import { suggestedName } from '@/core/library';
 import { cardsCount, plural } from '@/core/plural';
 import { parseTable } from '@/core/parse';
 import type { ColumnMode } from '@/core/parse';
-import { useAppDispatch, useAppState } from '@/state/AppContext';
+import { useActiveDeck, useAppDispatch, useAppState } from '@/state/AppContext';
 
 const PREVIEW_LIMIT = 5;
 
@@ -15,7 +16,9 @@ const COLUMN_OPTIONS: ReadonlyArray<{ value: ColumnMode; label: string }> = [
 ];
 
 export default function ImportScreen() {
-  const { cards, session } = useAppState();
+  const { decks } = useAppState();
+  const deck = useActiveDeck();
+  const session = deck?.session ?? null;
   const dispatch = useAppDispatch();
   const [text, setText] = useState('');
   const [columnMode, setColumnMode] = useState<ColumnMode>('auto');
@@ -116,12 +119,19 @@ export default function ImportScreen() {
         type="button"
         className="btn"
         disabled={result.addedCount === 0}
-        onClick={() => dispatch({ type: 'deck-imported', cards: assignIds(result.cards) })}
+        onClick={() =>
+          dispatch({
+            type: 'deck-created',
+            name: suggestedName(new Date()),
+            cards: assignIds(result.cards),
+            now: new Date(),
+          })
+        }
       >
         Создать колоду
       </button>
 
-      {cards.length > 0 && (
+      {decks.length > 0 && (
         <button
           type="button"
           className="link-button"

@@ -1,5 +1,6 @@
 import { expect, test } from '@playwright/test';
-import { BASE } from './base';
+import { serviceWorkerActive } from '../e2e/fixtures';
+import { APP_URL, BASE } from './base';
 
 test('приложение под подпутём грузится без ответов 4xx', async ({ page }) => {
   const failed: string[] = [];
@@ -22,4 +23,41 @@ test('приложение под подпутём грузится без от�
   // раньше, чем приедут ассеты, и пропустит их 404.
   await expect(page.getByRole('heading', { name: 'Вставьте таблицу со словами' })).toBeVisible();
   expect(failed).toEqual([]);
+});
+
+test('манифест лежит под подпутём и описывает его в start_url и scope', async ({ page }) => {
+  await page.goto('./');
+
+  // Атрибут, а не свойство .href: свойство браузер уже разрешил в абсолютный
+  // URL, и подмена base читается в нём хуже.
+  const href = await page.locator('link[rel="manifest"]').getAttribute('href');
+  expect(href).toBe(`${BASE}manifest.webmanifest`);
+
+  const response = await page.request.get(`${BASE}manifest.webmanifest`);
+  expect(response.status()).toBe(200);
+
+  const manifest = (await response.json()) as { start_url?: string; scope?: string };
+  // Неверный start_url — это установленное приложение, которое открывается
+  // не туда. На глаз незаметно: первая же навигация выглядит нормально.
+  expect(manifest.start_url).toBe(BASE);
+  expect(manifest.scope).toBe(BASE);
+});
+
+test('service worker зарегистрирован со scope подпути', async ({ page }) => {
+  await page.goto('./');
+  await serviceWorkerActive(page);
+
+  const registration = await page.evaluate(async () => {
+    const current = await navigator.serviceWorker.getRegistration();
+    return {
+      scope: current?.scope ?? null,
+      scriptURL: current?.active?.scriptURL ?? null,
+    };
+  });
+
+  // Хелпер serviceWorkerControlling проверяет только вхождение 'sw.js', и под
+  // корневым base такая проверка тоже зелёная. Здесь нужен полный адрес:
+  // именно scope решает, какие навигации service worker вообще перехватывает.
+  expect(registration.scope).toBe(APP_URL);
+  expect(registration.scriptURL).toBe(`${APP_URL}sw.js`);
 });

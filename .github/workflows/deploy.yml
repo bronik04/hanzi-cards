@@ -1,8 +1,13 @@
 name: Deploy
 
+# Запускается после CI, а не параллельно с ним: иначе коммит, ломающий тесты,
+# успевал бы уехать на сайт раньше, чем проверки покраснеют. vite build
+# проходит и на сломанной логике, так что без этой связи деплой ничего не ловит.
 on:
-  push:
+  workflow_run:
+    workflows: [CI]
     branches: [master]
+    types: [completed]
   workflow_dispatch:
 
 permissions:
@@ -12,30 +17,35 @@ permissions:
 
 concurrency:
   group: pages
-  cancel-in-progress: true
+  # Прерывать публикацию на полпути нельзя: оборванный deploy-pages оставляет
+  # окружение github-pages занятым, и следующий деплой приходится разблокировать
+  # руками. Так же поступает и стартовый workflow самого GitHub.
+  cancel-in-progress: false
 
 jobs:
   deploy:
+    if: github.event_name == 'workflow_dispatch' || github.event.workflow_run.conclusion == 'success'
     runs-on: ubuntu-latest
+    timeout-minutes: 15
     environment:
       name: github-pages
       url: ${{ steps.deployment.outputs.page_url }}
     steps:
       - uses: actions/checkout@v4
+        with:
+          # Именно тот коммит, который прошёл CI, а не просто свежий master.
+          ref: ${{ github.event.workflow_run.head_sha || github.ref }}
       - uses: actions/setup-node@v4
         with:
           node-version-file: .nvmrc
           cache: npm
-      # npm install, а не npm ci: npm на macOS не кладёт в lock-файл
-      # @rollup/rollup-linux-arm64-musl (26 платформ rollup из 27), и строгая
-      # проверка полноты в npm ci падает на пакете, который этому раннеру
-      # (linux x64) не нужен вовсе. Lock-файл закоммичен и по-прежнему
-      # определяет версии.
+      # npm install, а не npm ci — причина в комментарии к job check в ci.yml.
       - run: npm install --no-audit --no-fund
       - run: npm run build
         env:
-          # Единственное место, где base отличается от корня.
-          DEPLOY_BASE: /hanzi-cards/
+          # Pages отдаёт сайт по пути /<имя репозитория>/, поэтому base берётся
+          # оттуда же: зашитое руками имя разошлось бы при переименовании молча.
+          DEPLOY_BASE: /${{ github.event.repository.name }}/
       - uses: actions/configure-pages@v5
       - uses: actions/upload-pages-artifact@v3
         with:

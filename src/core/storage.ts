@@ -139,7 +139,8 @@ export function sessionCardIds(session: Session): string[] {
     : [...session.queue, ...session.nextRound];
 }
 
-function isDeck(value: unknown): value is Deck {
+/** Форма колоды, без проверки ссылок сессии. */
+function isDeckShape(value: unknown): value is Deck {
   if (
     !isRecord(value) ||
     typeof value.id !== 'string' ||
@@ -155,14 +156,37 @@ function isDeck(value: unknown): value is Deck {
   ) {
     return false;
   }
+  return value.session === null || isSession(value.session);
+}
 
-  if (value.session === null) return true;
-  if (!isSession(value.session)) return false;
+/** Сессия ссылается только на карточки своей колоды. */
+export function sessionFitsDeck(deck: Deck): boolean {
+  if (deck.session === null) return true;
+  const known = new Set(deck.cards.map((card) => card.id));
+  return sessionCardIds(deck.session).every((id) => known.has(id));
+}
 
+function isDeck(value: unknown): value is Deck {
   // Сессия, ссылающаяся на отсутствующую карточку, даёт экран тренировки без
-  // карточки и без единой кнопки. Такое состояние отвергается здесь.
-  const known = new Set(value.cards.map((card) => card.id));
-  return sessionCardIds(value.session).every((id) => known.has(id));
+  // карточки и без единой кнопки. В хранилище такое состояние отвергается
+  // целиком; файл обмена мягче — там сбрасывается только сессия.
+  return isDeckShape(value) && sessionFitsDeck(value);
+}
+
+/**
+ * Список колод из файла обмена: форма проверяется, ссылки сессий — нет.
+ * Их чинит `mergeImportedDecks`, сбрасывая только битую сессию.
+ */
+export function parseDeckList(raw: string): Deck[] | null {
+  let parsed: unknown;
+  try {
+    parsed = JSON.parse(raw);
+  } catch {
+    return null;
+  }
+  if (!isRecord(parsed) || parsed.version !== STORAGE_VERSION) return null;
+  if (!Array.isArray(parsed.decks) || !parsed.decks.every(isDeckShape)) return null;
+  return parsed.decks;
 }
 
 function isStoredState(value: unknown): value is StoredState {

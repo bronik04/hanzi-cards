@@ -5,6 +5,7 @@ import {
   deserialize,
   loadState,
   migrateFromV2,
+  parseDeckList,
   saveState,
 } from '@/core/storage';
 import type { StorageLike, StoredState } from '@/core/storage';
@@ -211,6 +212,38 @@ describe('migrateFromV2', () => {
   it('отвергает сессию v2, ссылающуюся на отсутствующую карточку', () => {
     const orphan = { ...v2, session: { ...v2.session, queue: ['нет'] } };
     expect(migrateFromV2(JSON.stringify(orphan), AT)).toBeNull();
+  });
+});
+
+describe('parseDeckList', () => {
+  it('возвращает колоды из выгрузки', () => {
+    const raw = JSON.stringify({ version: STORAGE_VERSION, decks: [deck] });
+    expect(parseDeckList(raw)).toEqual([deck]);
+  });
+
+  it('не требует activeDeckId', () => {
+    expect(parseDeckList(JSON.stringify({ version: STORAGE_VERSION, decks: [] }))).toEqual([]);
+  });
+
+  // Ключевое отличие от deserialize: тот же вход тот отвергает целиком.
+  it('пропускает колоду с висячей ссылкой сессии, в отличие от deserialize', () => {
+    const broken = { ...deck, session: { ...deck.session, queue: ['нет такой'] } };
+    const raw = JSON.stringify({ version: STORAGE_VERSION, decks: [broken] });
+    expect(parseDeckList(raw)).toHaveLength(1);
+    expect(deserialize(JSON.stringify({ ...valid, decks: [broken] }))).toBeNull();
+  });
+
+  it('битый JSON и чужую версию отвергает', () => {
+    expect(parseDeckList('{не json')).toBeNull();
+    expect(parseDeckList(JSON.stringify({ version: 99, decks: [] }))).toBeNull();
+  });
+
+  it('отвергает колоду с битой формой', () => {
+    const raw = JSON.stringify({
+      version: STORAGE_VERSION,
+      decks: [{ ...deck, direction: 'hanzi-to-mars' }],
+    });
+    expect(parseDeckList(raw)).toBeNull();
   });
 });
 

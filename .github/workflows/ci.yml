@@ -43,3 +43,29 @@ jobs:
           name: playwright-report
           path: playwright-report/
           retention-days: 7
+
+  # Отдельной джобой, а не шагом внутри e2e: идёт параллельно, поэтому общее
+  # время CI почти не растёт, и даёт свой красный сигнал — сразу видно, сломан
+  # именно продакшен-base или приложение вообще. deploy.yml ждёт заключения
+  # всего workflow CI, так что новая проверка автоматически становится ещё
+  # одним условием публикации и править deploy.yml не нужно.
+  e2e-subpath:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+      # npm install, а не npm ci — причина выше, в job check.
+      - run: npm install --no-audit --no-fund
+      - run: npx playwright install --with-deps chromium
+      - run: npm run test:e2e:subpath
+      - uses: actions/upload-artifact@v4
+        if: failure()
+        with:
+          # Имена артефактов в пределах одного запуска обязаны различаться,
+          # а джоба e2e уже занимает playwright-report.
+          name: playwright-report-subpath
+          path: playwright-report/
+          retention-days: 7

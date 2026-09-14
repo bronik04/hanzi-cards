@@ -16,6 +16,7 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "test:e2e": "playwright test",
+    "test:e2e:subpath": "playwright test --config playwright.subpath.config.ts",
     "icons": "node scripts/make-icons.mjs"
   },
   "dependencies": {

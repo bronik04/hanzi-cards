@@ -1,17 +1,6 @@
 import { expect, test } from '@playwright/test';
 import type { Page } from '@playwright/test';
-
-const WORDS = [
-  ['你好', 'ni3 hao3', 'привет'],
-  ['谢谢', 'xie4xie5', 'спасибо'],
-  ['再见', 'zai4jian4', 'до свидания'],
-  ['老师', 'lao3shi1', 'учитель'],
-  ['学生', 'xue2sheng5', 'ученик'],
-  ['中国', 'zhong1guo2', 'Китай'],
-  ['学习', 'xue2xi2', 'учиться'],
-  ['汉语', 'han4yu3', 'китайский язык'],
-];
-const TABLE = WORDS.map((row) => row.join('\t')).join('\n');
+import { TABLE, WORDS } from './fixtures';
 
 // Восемь карточек — это блок из семи плюс короткий блок из одной,
 // то есть проверяются и переход между блоками, и неполный последний блок.
@@ -99,7 +88,12 @@ test('пиньинь показан с диакритикой', async ({ page })
   await expect(page.getByText('nǐ hǎo')).toBeVisible();
 });
 
-test('service worker собран и отдаётся', async ({ request }) => {
+test('service worker собран и откладывает обновление до кнопки', async ({ request }) => {
   const response = await request.get('/sw.js');
   expect(response.status()).toBe(200);
+
+  // registerType: 'prompt' — новая версия активируется только по сообщению
+  // SKIP_WAITING, которое шлёт кнопка «Обновить». Переключение на autoUpdate
+  // убрало бы этот обмен и начало бы перезагружать страницу посреди урока.
+  expect(await response.text()).toContain('SKIP_WAITING');
 });

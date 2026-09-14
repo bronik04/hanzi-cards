@@ -807,11 +807,14 @@ Co-Authored-By: Claude Opus 5 <noreply@anthropic.com>"
 
 Модуль готовит и разбирает текст; сохранение файла на диск делает слой представления в задаче 7. `core` не имеет доступа к DOM, и это правило Этапа 0 остаётся в силе.
 
+**Почему проверка файла своя, а не `deserialize`.** Спека требует разного отношения к висячей ссылке сессии: хранилище отвергает состояние целиком, а файл — только сбрасывает сессию, потому что файл приходит от пользователя и терять из-за одной битой сессии всю колоду неправильно. `deserialize` проверку ссылок делает, поэтому через него файл с битой сессией был бы отвергнут целиком и правило спеки стало бы недостижимым: `mergeImportedDecks` до такой колоды просто не дошёл бы. Поэтому проверка формы и проверка ссылок разводятся: `storage.ts` получает `parseDeckList`, который проверяет форму без ссылок, а сброс битой сессии остаётся за `mergeImportedDecks`.
+
 **Files:**
 - Create: `src/core/transfer.ts`, `src/core/transfer.test.ts`
+- Modify: `src/core/storage.ts`, `src/core/storage.test.ts`
 
 **Interfaces:**
-- Consumes: `Deck`, `uniqueName` из `@/core/library`; `newId` из `@/core/id`; `sessionCardIds`, `STORAGE_VERSION`, `deserialize` из `@/core/storage`
+- Consumes: `Deck`, `uniqueName` из `@/core/library`; `newId` из `@/core/id`; `sessionCardIds`, `STORAGE_VERSION`, `parseDeckList` из `@/core/storage`
 - Produces:
   - `exportLibraryJson(decks: readonly Deck[]): string`
   - `type ImportResult = { ok: true; decks: Deck[] } | { ok: false; error: string }`
@@ -820,6 +823,112 @@ Co-Authored-By: Claude Opus 5 <noreply@anthropic.com>"
   - `exportDeckTable(deck: Deck): string`
   - `libraryFileName(now: Date): string`
   - `deckFileName(deck: Deck): string`
+
+- [ ] **Step 0: Разделить в `storage.ts` проверку формы и проверку ссылок**
+
+Сейчас `isDeck` проверяет и форму колоды, и то, что сессия ссылается только на свои карточки. Файлу обмена нужна первая половина без второй. Разделите функцию и добавьте разбор списка колод.
+
+В `src/core/storage.ts` замените `isDeck` на три функции:
+
+```ts
+/** Форма колоды, без проверки ссылок сессии. */
+function isDeckShape(value: unknown): value is Deck {
+  if (
+    !isRecord(value) ||
+    typeof value.id !== 'string' ||
+    typeof value.name !== 'string' ||
+    typeof value.createdAt !== 'string' ||
+    typeof value.lastOpenedAt !== 'string' ||
+    !Array.isArray(value.cards) ||
+    !value.cards.every(isCard) ||
+    typeof value.direction !== 'string' ||
+    !DIRECTIONS.includes(value.direction as Direction) ||
+    !isStats(value.stats) ||
+    !isMode(value.startedMode)
+  ) {
+    return false;
+  }
+  return value.session === null || isSession(value.session);
+}
+
+/** Сессия ссылается только на карточки своей колоды. */
+export function sessionFitsDeck(deck: Deck): boolean {
+  if (deck.session === null) return true;
+  const known = new Set(deck.cards.map((card) => card.id));
+  return sessionCardIds(deck.session).every((id) => known.has(id));
+}
+
+function isDeck(value: unknown): value is Deck {
+  // Сессия, ссылающаяся на отсутствующую карточку, даёт экран тренировки без
+  // карточки и без единой кнопки. В хранилище такое состояние отвергается
+  // целиком; файл обмена мягче — там сбрасывается только сессия.
+  return isDeckShape(value) && sessionFitsDeck(value);
+}
+```
+
+Рядом с `deserialize` добавьте разбор файла обмена:
+
+```ts
+/**
+ * Список колод из файла обмена: форма проверяется, ссылки сессий — нет.
+ * Их чинит `mergeImportedDecks`, сбрасывая только битую сессию.
+ */
+export function parseDeckList(raw: string): Deck[] | null {
+  let parsed: unknown;
+  try {
+    parsed = JSON.parse(raw);
+  } catch {
+    return null;
+  }
+  if (!isRecord(parsed) || parsed.version !== STORAGE_VERSION) return null;
+  if (!Array.isArray(parsed.decks) || !parsed.decks.every(isDeckShape)) return null;
+  return parsed.decks;
+}
+```
+
+Допишите в `src/core/storage.test.ts` блок:
+
+```ts
+describe('parseDeckList', () => {
+  it('возвращает колоды из выгрузки', () => {
+    const raw = JSON.stringify({ version: STORAGE_VERSION, decks: [deck] });
+    expect(parseDeckList(raw)).toEqual([deck]);
+  });
+
+  it('не требует activeDeckId', () => {
+    expect(parseDeckList(JSON.stringify({ version: STORAGE_VERSION, decks: [] }))).toEqual([]);
+  });
+
+  // Ключевое отличие от deserialize: тот же вход тот отвергает целиком.
+  it('пропускает колоду с висячей ссылкой сессии, в отличие от deserialize', () => {
+    const broken = { ...deck, session: { ...deck.session, queue: ['нет такой'] } };
+    const raw = JSON.stringify({ version: STORAGE_VERSION, decks: [broken] });
+    expect(parseDeckList(raw)).toHaveLength(1);
+    expect(deserialize(JSON.stringify({ ...valid, decks: [broken] }))).toBeNull();
+  });
+
+  it('битый JSON и чужую версию отвергает', () => {
+    expect(parseDeckList('{не json')).toBeNull();
+    expect(parseDeckList(JSON.stringify({ version: 99, decks: [] }))).toBeNull();
+  });
+
+  it('отвергает колоду с битой формой', () => {
+    const raw = JSON.stringify({
+      version: STORAGE_VERSION,
+      decks: [{ ...deck, direction: 'hanzi-to-mars' }],
+    });
+    expect(parseDeckList(raw)).toBeNull();
+  });
+});
+```
+
+Добавьте `parseDeckList` в импорты теста. Прогоните:
+
+```bash
+npm run test -- src/core/storage.test.ts && npm run lint
+```
+
+Ожидается: всё зелёное. Существующие тесты `deserialize` не меняются — поведение хранилища прежнее.
 
 - [ ] **Step 1: Написать падающие тесты**
 
@@ -871,6 +980,26 @@ describe('exportLibraryJson и parseLibraryJson', () => {
   it('чужая структура даёт ошибку', () => {
     const result = parseLibraryJson(JSON.stringify({ version: 99, decks: [] }));
     expect(result.ok).toBe(false);
+  });
+
+  // Спека требует, чтобы файл с битой сессией загружался, теряя только сессию.
+  // Проверка целиком: разбор не должен отвергнуть такой файл, иначе до сброса
+  // сессии в mergeImportedDecks дело не дойдёт.
+  it('файл с битой сессией разбирается, и сессия сбрасывается при слиянии', () => {
+    const broken = deck('С битой сессией', {
+      session: {
+        mode: 'simple', round: 1, queue: ['нет такой'], nextRound: [],
+        perfectRound: true, finalRound: false, finished: false,
+      },
+    });
+    const result = parseLibraryJson(exportLibraryJson([broken]));
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+
+    const merged = mergeImportedDecks([], result.decks);
+    expect(merged).toHaveLength(1);
+    expect(merged[0]?.session).toBeNull();
+    expect(merged[0]?.cards).toHaveLength(2);
   });
 });
 
@@ -985,7 +1114,7 @@ npm run test -- src/core/transfer.test.ts
 import { newId } from '@/core/id';
 import { uniqueName } from '@/core/library';
 import type { Deck } from '@/core/library';
-import { STORAGE_VERSION, deserialize, sessionCardIds } from '@/core/storage';
+import { STORAGE_VERSION, parseDeckList, sessionCardIds } from '@/core/storage';
 
 export type ImportResult = { ok: true; decks: Deck[] } | { ok: false; error: string };
 
@@ -999,22 +1128,12 @@ export function exportLibraryJson(decks: readonly Deck[]): string {
 }
 
 export function parseLibraryJson(raw: string): ImportResult {
-  // Проверка та же, что у хранилища: файл должен быть пригоден к загрузке
-  // ровно в той же мере, что и содержимое localStorage.
-  const state = deserialize(withoutActiveDeck(raw));
-  if (state === null) return { ok: false, error: 'Файл не похож на сохранённую библиотеку' };
-  return { ok: true, decks: state.decks };
-}
-
-/** Файл выгрузки не содержит activeDeckId, а проверка хранилища его ожидает. */
-function withoutActiveDeck(raw: string): string {
-  try {
-    const parsed: unknown = JSON.parse(raw);
-    if (typeof parsed !== 'object' || parsed === null) return raw;
-    return JSON.stringify({ ...(parsed as Record<string, unknown>), activeDeckId: null });
-  } catch {
-    return raw;
-  }
+  // Форма проверяется строго, ссылки сессий — нет: битую сессию сбрасывает
+  // mergeImportedDecks, оставляя колоду. Проверь их здесь, файл с одной
+  // битой сессией был бы отвергнут целиком, чего спека не хочет.
+  const decks = parseDeckList(raw);
+  if (decks === null) return { ok: false, error: 'Файл не похож на сохранённую библиотеку' };
+  return { ok: true, decks };
 }
 
 /**
@@ -1073,10 +1192,10 @@ export function deckFileName(deck: Deck): string {
 - [ ] **Step 4: Убедиться, что тесты проходят**
 
 ```bash
-npm run test -- src/core/transfer.test.ts
+npm run test -- src/core/transfer.test.ts src/core/storage.test.ts
 ```
 
-Ожидается: все тесты зелёные.
+Ожидается: все тесты зелёные в обоих файлах.
 
 - [ ] **Step 5: Проверить линтер**
 
@@ -1089,7 +1208,7 @@ npm run lint
 - [ ] **Step 6: Коммит**
 
 ```bash
-git add src/core/transfer.ts src/core/transfer.test.ts
+git add src/core/transfer.ts src/core/transfer.test.ts src/core/storage.ts src/core/storage.test.ts
 git commit -m "feat: build and parse the library and deck exchange files
 
 Co-Authored-By: Claude Opus 5 <noreply@anthropic.com>"

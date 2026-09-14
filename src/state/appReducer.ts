@@ -106,8 +106,14 @@ export function appReducer(state: AppState, action: AppAction): AppState {
         screen: 'library',
       };
 
-    case 'decks-imported':
-      return { ...state, decks: action.decks, screen: 'library' };
+    case 'decks-imported': {
+      // Висячий activeDeckId рушит инвариант isStoredState — следующая
+      // загрузка хранилища сочла бы состояние повреждённым и стёрла библиотеку.
+      const activeDeckId = action.decks.some((deck) => deck.id === state.activeDeckId)
+        ? state.activeDeckId
+        : null;
+      return { ...state, decks: action.decks, activeDeckId, screen: 'library' };
+    }
 
     case 'go-to-library':
       return { ...state, screen: 'library' };

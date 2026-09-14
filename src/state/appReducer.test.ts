@@ -133,6 +133,13 @@ describe('тренировка идёт в активной колоде', () =>
     expect(state.decks[1]?.session).toEqual(secondSession);
   });
 
+  it('старт сессии ведёт на тренировку и запоминает режим', () => {
+    const state = appReducer(withOneDeck(), { type: 'session-started', mode: 'ring' });
+    expect(state.screen).toBe('training');
+    expect(activeDeck(state)?.startedMode).toBe('ring');
+    expect(activeDeck(state)?.session?.mode).toBe('ring');
+  });
+
   it('завершение сессии ведёт на итоги', () => {
     let state = withOneDeck();
     state = appReducer(state, { type: 'session-started', mode: 'simple' });
@@ -158,6 +165,11 @@ describe('тренировка идёт в активной колоде', () =>
   it('без активной колоды действия тренировки ничего не меняют', () => {
     const state = hydrated();
     expect(appReducer(state, { type: 'session-started', mode: 'simple' })).toBe(state);
+    expect(appReducer(state, { type: 'swiped', direction: 'right' })).toBe(state);
+  });
+
+  it('свайп без сессии в активной колоде ничего не меняет', () => {
+    const state = withOneDeck();
     expect(appReducer(state, { type: 'swiped', direction: 'right' })).toBe(state);
   });
 });
@@ -207,6 +219,13 @@ describe('навигация', () => {
     const state = appReducer(withOneDeck(), { type: 'decks-imported', decks: imported });
     expect(state.decks.map((d) => d.name)).toEqual(['Из файла']);
     expect(state.screen).toBe('library');
+  });
+
+  it('decks-imported сбрасывает activeDeckId, если его не стало в новом списке', () => {
+    const state = withOneDeck();
+    const imported = [createDeck('Из файла', cards, AT)];
+    const result = appReducer(state, { type: 'decks-imported', decks: imported });
+    expect(result.activeDeckId).toBeNull();
   });
 
   it('storage-failed поднимает флаг', () => {

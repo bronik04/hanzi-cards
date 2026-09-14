@@ -13,7 +13,7 @@ import { useActiveDeck, useAppDispatch } from '@/state/AppContext';
 
 /** Пустая колода одним объектом на весь модуль: новый литерал на каждый
  *  рендер сбрасывал бы useMemo с картой карточек. */
-const NO_CARDS: CardType[] = [];
+const NO_CARDS: readonly CardType[] = [];
 
 /** Совпадает с длительностью перехода .card в app.css. */
 export const EXIT_DURATION = 220;

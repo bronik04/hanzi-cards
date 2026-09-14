@@ -3,7 +3,7 @@ import userEvent from '@testing-library/user-event';
 import App from '@/App';
 import { STORAGE_KEY, STORAGE_VERSION } from '@/core/storage';
 import type { StorageLike, StoredState } from '@/core/storage';
-import { createDeck } from '@/core/library';
+import { createDeck, suggestedName } from '@/core/library';
 import type { Deck } from '@/core/library';
 
 const AT = new Date('2026-09-14T10:00:00Z');
@@ -45,6 +45,18 @@ describe('App: полный цикл', () => {
 
     await importDeck(user);
     expect(screen.getByRole('heading', { name: 'Колода готова: 2 карточки' })).toBeInTheDocument();
+  });
+
+  // ModeScreen имя колоды не показывает — единственное место, где оно видно,
+  // это библиотека, поэтому имя проверяется через переход туда.
+  it('созданная колода получает имя-подсказку', async () => {
+    const user = userEvent.setup();
+    const { storage } = memoryStorage();
+    render(<App storage={storage} />);
+
+    await importDeck(user);
+    await user.click(screen.getByRole('button', { name: 'В библиотеку' }));
+    expect(screen.getByText(suggestedName(new Date()))).toBeInTheDocument();
   });
 
   it('простой режим доходит до экрана итогов', async () => {

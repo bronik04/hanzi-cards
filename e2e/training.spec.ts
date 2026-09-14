@@ -1,5 +1,5 @@
 import { expect, test } from '@playwright/test';
-import type { Locator } from '@playwright/test';
+import type { Page } from '@playwright/test';
 
 const WORDS = [
   ['你好', 'ni3 hao3', 'привет'],
@@ -41,12 +41,24 @@ test('режим колец проходится до экрана итогов'
   await expect(page.getByText('Знаю: 16 · Не знаю: 0')).toBeVisible();
 });
 
-/** Прямоугольник элемента. Отдельной функцией, чтобы `null` от невидимого
- *  элемента падал внятным сообщением, а не сравнением с undefined. */
-async function boxOf(locator: Locator) {
-  const box = await locator.boundingBox();
-  if (box === null) throw new Error('элемент не занимает места на странице');
-  return box;
+/** Текст баннера и геометрия — одним чтением страницы. Баннер живёт 1800 мс, и
+ *  между двумя round-trip'ами он успел бы погаснуть: замер тогда сошёлся бы сам
+ *  собой и тест молча прошёл бы мимо регресса. */
+async function trainingLayout(page: Page) {
+  return page.evaluate(() => {
+    const banner = document.querySelector('[data-testid="stage-banner"]');
+    const know = [...document.querySelectorAll('button')].find(
+      (node) => node.textContent === 'Знаю',
+    );
+    if (banner === null || know === undefined) throw new Error('экран тренировки не отрисован');
+    return {
+      bannerText: banner.textContent ?? '',
+      bannerHeight: banner.getBoundingClientRect().height,
+      // Координата документа, а не окна: клик прокручивает страницу к кнопке,
+      // и y относительно окна менялся бы не из-за вёрстки.
+      knowTop: know.getBoundingClientRect().y + window.scrollY,
+    };
+  });
 }
 
 // Баннер о смене блока раньше монтировался в поток и сдвигал карточку с кнопками
@@ -59,24 +71,26 @@ test('смена блока не сдвигает кнопки', async ({ page }
   await page.getByRole('button', { name: 'Заучивание кольцами по 7' }).click();
   await expect(page.getByText('Блок 1 из 2 · осталось 7')).toBeVisible();
 
-  const banner = page.getByTestId('stage-banner');
   const know = page.getByRole('button', { name: 'Знаю' });
+  const before = await trainingLayout(page);
 
   // Пустой слот держит высоту строки: иначе появление текста раздвинет колонку.
-  await expect(banner).toBeEmpty();
-  expect((await boxOf(banner)).height).toBeGreaterThan(0);
-
-  const before = (await boxOf(know)).y;
+  expect(before.bannerText).toBe('');
+  expect(before.bannerHeight).toBeGreaterThan(0);
 
   // Семь карточек первого блока — после последней начинается блок 2.
   for (let done = 1; done <= 7; done += 1) {
     await know.click();
     await expect(page.getByTestId('count-known')).toHaveText(String(done));
   }
+  await expect(page.getByTestId('stage-banner')).toHaveText('Блок 2 из 2');
 
-  // Баннер виден 1800 мс; позиция кнопки меряется, пока он на экране.
-  await expect(banner).toHaveText('Блок 2 из 2');
-  expect((await boxOf(know)).y).toBeCloseTo(before, 0);
+  const during = await trainingLayout(page);
+  // Баннер ещё на экране — иначе сравнение ниже сошлось бы само собой.
+  expect(during.bannerText).toBe('Блок 2 из 2');
+  // Высота слота не зависит от наличия текста, а кнопка не сдвинулась.
+  expect(during.bannerHeight).toBe(before.bannerHeight);
+  expect(during.knowTop).toBeCloseTo(before.knowTop, 0);
 });
 
 test('пиньинь показан с диакритикой', async ({ page }) => {

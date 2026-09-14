@@ -159,6 +159,8 @@ describe('TrainingScreen', () => {
 
       const banner = screen.getByTestId('stage-banner');
       expect(banner).toBeEmptyDOMElement();
+      // Живой регион озвучивает смену круга только если он был в DOM заранее.
+      expect(banner).toHaveAttribute('aria-live', 'polite');
 
       // Влево, вправо, вправо — круг закрыт с ошибкой, начинается круг 2.
       swipeWithTimers('ArrowLeft');

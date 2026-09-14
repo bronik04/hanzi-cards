@@ -111,7 +111,7 @@ describe('App: полный цикл', () => {
     expect(screen.getByRole('heading', { name: 'Мои колоды' })).toBeInTheDocument();
     expect(screen.getByText('тренировка не закончена', { exact: false })).toBeInTheDocument();
 
-    await user.click(screen.getByRole('button', { name: /Юнит 1/ }));
+    await user.click(screen.getByRole('button', { name: /^Юнит 1/ }));
     expect(screen.getByRole('heading', { name: 'Продолжить тренировку?' })).toBeInTheDocument();
   });
 

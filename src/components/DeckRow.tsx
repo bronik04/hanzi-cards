@@ -18,6 +18,18 @@ export default function DeckRow({ deck, onOpen, onRename, onDelete, onExport }: 
   const unfinished = deck.session !== null && !deck.session.finished;
 
   if (mode === 'rename') {
+    const trimmed = draft.trim();
+    const submit = () => {
+      // Пустое имя не сохраняем: строка без имени неотличима от соседних.
+      if (trimmed === '') return;
+      onRename(trimmed);
+      setMode('view');
+    };
+    const cancel = () => {
+      setDraft(deck.name);
+      setMode('view');
+    };
+
     return (
       <div className="deck-row-wrap">
         <label className="library__rename-label">
@@ -27,22 +39,17 @@ export default function DeckRow({ deck, onOpen, onRename, onDelete, onExport }: 
             value={draft}
             autoFocus
             onChange={(event) => setDraft(event.target.value)}
+            onKeyDown={(event) => {
+              if (event.key === 'Enter') submit();
+              else if (event.key === 'Escape') cancel();
+            }}
           />
         </label>
         <div className="deck-row__actions">
-          <button
-            type="button"
-            className="btn"
-            onClick={() => {
-              // Пустое имя не сохраняем: строка без имени неотличима от соседних.
-              if (draft.trim() === '') return;
-              onRename(draft.trim());
-              setMode('view');
-            }}
-          >
+          <button type="button" className="btn" disabled={trimmed === ''} onClick={submit}>
             Сохранить
           </button>
-          <button type="button" className="link-button" onClick={() => setMode('view')}>
+          <button type="button" className="link-button" onClick={cancel}>
             отмена
           </button>
         </div>
@@ -67,10 +74,16 @@ export default function DeckRow({ deck, onOpen, onRename, onDelete, onExport }: 
       {mode === 'confirm-delete' ? (
         <div className="deck-row__confirm">
           <p>Удалить вместе с прогрессом?</p>
-          <button type="button" className="btn" onClick={onDelete}>
+          <button type="button" className="btn" aria-label={`Удалить «${deck.name}»`} onClick={onDelete}>
             Удалить
           </button>
-          <button type="button" className="link-button" onClick={() => setMode('view')}>
+          <button
+            type="button"
+            className="link-button"
+            aria-label={`отмена «${deck.name}»`}
+            autoFocus
+            onClick={() => setMode('view')}
+          >
             отмена
           </button>
         </div>
@@ -79,6 +92,7 @@ export default function DeckRow({ deck, onOpen, onRename, onDelete, onExport }: 
           <button
             type="button"
             className="link-button"
+            aria-label={`переименовать «${deck.name}»`}
             onClick={() => {
               setDraft(deck.name);
               setMode('rename');
@@ -86,12 +100,18 @@ export default function DeckRow({ deck, onOpen, onRename, onDelete, onExport }: 
           >
             переименовать
           </button>
-          <button type="button" className="link-button" onClick={onExport}>
+          <button
+            type="button"
+            className="link-button"
+            aria-label={`выгрузить «${deck.name}»`}
+            onClick={onExport}
+          >
             выгрузить
           </button>
           <button
             type="button"
             className="link-button"
+            aria-label={`удалить «${deck.name}»`}
             onClick={() => setMode('confirm-delete')}
           >
             удалить

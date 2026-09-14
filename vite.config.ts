@@ -34,6 +34,11 @@ export default defineConfig({
       },
       workbox: {
         globPatterns: ['**/*.{js,css,html,svg,png,woff2}'],
+        // Без этого service worker берёт страницу под контроль только со
+        // следующей навигации: открыл приложение впервые, потерял сеть —
+        // и офлайна нет. Обновления это не затрагивает, ими управляет
+        // skipWaiting, который в режиме 'prompt' ждёт кнопки «Обновить».
+        clientsClaim: true,
       },
     }),
   ],

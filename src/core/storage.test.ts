@@ -164,6 +164,26 @@ describe('migrateFromV2', () => {
     expect(migrateFromV2('{не json', AT)).toBeNull();
     expect(migrateFromV2(JSON.stringify({ version: 1 }), AT)).toBeNull();
   });
+
+  it('на неизвестном направлении в v2 даёт null', () => {
+    const broken = { ...v2, direction: 'hanzi-to-mars' };
+    expect(migrateFromV2(JSON.stringify(broken), AT)).toBeNull();
+  });
+
+  it('на битой статистике в v2 даёт null', () => {
+    const broken = { ...v2, stats: { known: 'много' } };
+    expect(migrateFromV2(JSON.stringify(broken), AT)).toBeNull();
+  });
+
+  it('на сессии неправильной формы в v2 даёт null', () => {
+    const broken = { ...v2, session: { mode: 'simple' } };
+    expect(migrateFromV2(JSON.stringify(broken), AT)).toBeNull();
+  });
+
+  it('отвергает сессию v2, ссылающуюся на отсутствующую карточку', () => {
+    const orphan = { ...v2, session: { ...v2.session, queue: ['нет'] } };
+    expect(migrateFromV2(JSON.stringify(orphan), AT)).toBeNull();
+  });
 });
 
 describe('loadState: перенос', () => {

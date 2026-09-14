@@ -1,9 +1,8 @@
 import { DIRECTIONS } from '@/core/deck';
 import type { Card, Direction } from '@/core/deck';
-import { createDeck } from '@/core/library';
+import { createDeck, suggestedName } from '@/core/library';
 import type { Deck } from '@/core/library';
 import type { Session, SessionMode, Stats } from '@/core/session';
-import { suggestedName } from '@/core/library';
 
 export const STORAGE_KEY = 'flashcards.v3';
 export const STORAGE_VERSION = 3;
@@ -58,7 +57,10 @@ export function migrateFromV2(raw: string | null, now: Date): StoredState | null
     stats: parsed.stats,
     startedMode: parsed.startedMode === 'ring' ? 'ring' : 'simple',
   };
-  return { version: STORAGE_VERSION, decks: [deck], activeDeckId: deck.id };
+  // Прогоняем собранную колоду через isDeck вместо повторной ручной проверки
+  // ссылок сессии на карточки: это то же правило, которое Этап 0 применял к
+  // v2 напрямую, и оно не должно расходиться с проверкой v3 в isStoredState.
+  return isDeck(deck) ? { version: STORAGE_VERSION, decks: [deck], activeDeckId: deck.id } : null;
 }
 
 export function loadState(storage: StorageLike, now: Date): StoredState | null {

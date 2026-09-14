@@ -60,6 +60,15 @@ jobs:
       # npm install, а не npm ci — причина выше, в job check.
       - run: npm install --no-audit --no-fund
       - run: npx playwright install --with-deps chromium
+      # Подпуть в тестах зашит константой намеренно: сверяться с той же
+      # переменной, из которой собрано приложение, бессмысленно. Но после
+      # переименования репозитория стенд молча проверял бы подпуть, которого
+      # в продакшене нет, — этот шаг превращает рассинхрон в красный CI.
+      - name: base.ts matches the production base
+        run: |
+          expected="/${GITHUB_REPOSITORY##*/}/"
+          grep -q "BASE = '${expected}'" e2e-subpath/base.ts \
+            || { echo "e2e-subpath/base.ts не совпадает с ${expected}"; exit 1; }
       - run: npm run test:e2e:subpath
       - uses: actions/upload-artifact@v4
         if: failure()

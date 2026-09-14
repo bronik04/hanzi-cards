@@ -2916,6 +2916,12 @@ Co-Authored-By: Claude Opus 5 <noreply@anthropic.com>"
 > Зато этот стенд импортирует помощники из `e2e/fixtures.ts` и ходит по тем же
 > экранам, поэтому чинить его надо здесь же: шаг 3 ниже.
 
+> **Про селекторы.** У кнопок строки колоды доступное имя включает имя колоды —
+> `переименовать «Юнит 1»`, `удалить «Юнит 1»`, — чтобы читалка не произносила
+> подряд три одинаковых слова на списке из десяти колод. Поэтому имя колоды
+> в селекторах якорится с начала (`/^Юнит 1/`): без якоря `/Юнит 1/` поймает
+> заодно все три кнопки действий этой же строки, и `toHaveCount(2)` увидит восемь.
+
 - [ ] **Step 1: Добавить помощник в фикстуры**
 
 Допишите в `e2e/fixtures.ts`:
@@ -2957,11 +2963,11 @@ test('две колоды не мешают тренировкам друг др
 
   // Первая колода должна помнить, что тренировка не закончена.
   await page.getByRole('button', { name: 'В библиотеку' }).click();
-  await expect(page.getByRole('button', { name: /Юнит 1/ })).toContainText('тренировка не закончена');
-  await expect(page.getByRole('button', { name: /Юнит 2/ })).not.toContainText('тренировка не закончена');
+  await expect(page.getByRole('button', { name: /^Юнит 1/ })).toContainText('тренировка не закончена');
+  await expect(page.getByRole('button', { name: /^Юнит 2/ })).not.toContainText('тренировка не закончена');
 
   // И действительно продолжает с того же места.
-  await page.getByRole('button', { name: /Юнит 1/ }).click();
+  await page.getByRole('button', { name: /^Юнит 1/ }).click();
   await page.getByRole('button', { name: 'Продолжить' }).click();
   await expect(page.getByTestId('count-known')).toHaveText('1');
 });
@@ -2971,14 +2977,14 @@ test('переименование и удаление колоды', async ({ p
   await createDeckThroughUi(page, 'Юнит 1', SHORT_TABLE);
   await page.getByRole('button', { name: 'В библиотеку' }).click();
 
-  await page.getByRole('button', { name: 'переименовать' }).click();
+  await page.getByRole('button', { name: /^переименовать/ }).click();
   await page.getByLabel('Название колоды').fill('Переименованная');
   await page.getByRole('button', { name: 'Сохранить' }).click();
-  await expect(page.getByRole('button', { name: /Переименованная/ })).toBeVisible();
+  await expect(page.getByRole('button', { name: /^Переименованная/ })).toBeVisible();
 
-  await page.getByRole('button', { name: 'удалить' }).click();
+  await page.getByRole('button', { name: /^удалить/ }).click();
   await expect(page.getByText('Удалить вместе с прогрессом?')).toBeVisible();
-  await page.getByRole('button', { name: 'Удалить' }).click();
+  await page.getByRole('button', { name: /^Удалить/ }).click();
   await expect(page.getByText('Пока ни одной колоды', { exact: false })).toBeVisible();
 });
 
@@ -2999,8 +3005,8 @@ test('библиотека сохраняется в файл и загружа�
   await page.getByRole('button', { name: 'Загрузить из файла' }).click();
   await page.locator('input[type="file"][accept*="json"]').setInputFiles(path as string);
 
-  await expect(page.getByRole('button', { name: /Юнит 1/ })).toHaveCount(2);
-  await expect(page.getByRole('button', { name: /Юнит 1 \(2\)/ })).toBeVisible();
+  await expect(page.getByRole('button', { name: /^Юнит 1/ })).toHaveCount(2);
+  await expect(page.getByRole('button', { name: /^Юнит 1 \(2\)/ })).toBeVisible();
 });
 ```
 

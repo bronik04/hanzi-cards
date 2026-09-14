@@ -54,6 +54,21 @@ describe('saveState и loadState', () => {
     expect(loadState(storage, AT)).toEqual(valid);
   });
 
+  it('сохраняет сессию колец', () => {
+    const storage = memoryStorage();
+    const ringState: StoredState = {
+      ...valid,
+      decks: [
+        {
+          ...deck,
+          session: { mode: 'ring', blocks: [['c1']], blockIndex: 0, queue: ['c1'], finished: false },
+        },
+      ],
+    };
+    expect(saveState(storage, ringState)).toBe(true);
+    expect(loadState(storage, AT)).toEqual(ringState);
+  });
+
   it('пишет ровно по ключу flashcards.v3', () => {
     const storage = memoryStorage();
     saveState(storage, valid);
@@ -106,6 +121,19 @@ describe('deserialize', () => {
 
   it('отвергает сессию, ссылающуюся на отсутствующую карточку', () => {
     const orphan = { ...valid, decks: [{ ...deck, session: { ...deck.session, queue: ['нет'] } }] };
+    expect(deserialize(JSON.stringify(orphan))).toBeNull();
+  });
+
+  it('отвергает блок колец с отсутствующей карточкой', () => {
+    const orphan = {
+      ...valid,
+      decks: [
+        {
+          ...deck,
+          session: { mode: 'ring', blocks: [['c1'], ['нет']], blockIndex: 0, queue: ['c1'], finished: false },
+        },
+      ],
+    };
     expect(deserialize(JSON.stringify(orphan))).toBeNull();
   });
 

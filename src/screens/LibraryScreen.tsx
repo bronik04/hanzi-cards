@@ -1,5 +1,5 @@
+import DeckRow from '@/components/DeckRow';
 import { byRecent } from '@/core/library';
-import { cardsCount } from '@/core/plural';
 import { useAppDispatch, useAppState } from '@/state/AppContext';
 
 export default function LibraryScreen() {
@@ -25,21 +25,13 @@ export default function LibraryScreen() {
           <ul className="library__list">
             {byRecent(decks).map((deck) => (
               <li key={deck.id}>
-                <button
-                  type="button"
-                  className="deck-row"
-                  onClick={() => dispatch({ type: 'deck-opened', id: deck.id, now: new Date() })}
-                >
-                  <span className="deck-row__main">
-                    <span className="deck-row__name">{deck.name}</span>
-                    <span className="deck-row__meta">
-                      {cardsCount(deck.cards.length)}
-                      {deck.session !== null && !deck.session.finished && (
-                        <span className="deck-row__unfinished"> · тренировка не закончена</span>
-                      )}
-                    </span>
-                  </span>
-                </button>
+                <DeckRow
+                  deck={deck}
+                  onOpen={() => dispatch({ type: 'deck-opened', id: deck.id, now: new Date() })}
+                  onRename={(name) => dispatch({ type: 'deck-renamed', id: deck.id, name })}
+                  onDelete={() => dispatch({ type: 'deck-deleted', id: deck.id })}
+                  onExport={() => undefined}
+                />
               </li>
             ))}
           </ul>

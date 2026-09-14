@@ -1,0 +1,112 @@
+import { render, screen } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
+import DeckRow from '@/components/DeckRow';
+import { createDeck } from '@/core/library';
+import type { Deck } from '@/core/library';
+import { createSession } from '@/core/session';
+import type { Card } from '@/core/deck';
+
+const AT = new Date('2026-09-14T10:00:00Z');
+const cards: Card[] = [
+  { id: 'c1', hanzi: '你好', pinyin: 'nǐ hǎo', translation: 'привет' },
+  { id: 'c2', hanzi: '谢谢', pinyin: 'xièxie', translation: 'спасибо' },
+];
+
+function renderRow(overrides: Partial<Deck> = {}) {
+  const deck = { ...createDeck('Юнит 1', cards, AT), ...overrides };
+  const handlers = {
+    onOpen: vi.fn(),
+    onRename: vi.fn(),
+    onDelete: vi.fn(),
+    onExport: vi.fn(),
+  };
+  render(<DeckRow deck={deck} {...handlers} />);
+  return handlers;
+}
+
+describe('DeckRow', () => {
+  it('показывает имя и число карточек', () => {
+    renderRow();
+    expect(screen.getByText('Юнит 1')).toBeInTheDocument();
+    expect(screen.getByText('2 карточки', { exact: false })).toBeInTheDocument();
+  });
+
+  it('помечает незавершённую тренировку', () => {
+    renderRow({ session: createSession(['c1', 'c2'], 'simple') });
+    expect(screen.getByText('тренировка не закончена', { exact: false })).toBeInTheDocument();
+  });
+
+  it('без сессии пометки нет', () => {
+    renderRow();
+    expect(screen.queryByText('тренировка не закончена', { exact: false })).not.toBeInTheDocument();
+  });
+
+  it('нажатие на строку открывает колоду', async () => {
+    const user = userEvent.setup();
+    const { onOpen } = renderRow();
+    await user.click(screen.getByRole('button', { name: /Юнит 1/ }));
+    expect(onOpen).toHaveBeenCalledTimes(1);
+  });
+
+  it('переименование отдаёт новое имя', async () => {
+    const user = userEvent.setup();
+    const { onRename } = renderRow();
+    await user.click(screen.getByRole('button', { name: 'переименовать' }));
+
+    const field = screen.getByLabelText('Название колоды');
+    await user.clear(field);
+    await user.type(field, 'Другое имя');
+    await user.click(screen.getByRole('button', { name: 'Сохранить' }));
+
+    expect(onRename).toHaveBeenCalledWith('Другое имя');
+  });
+
+  it('переименование можно отменить', async () => {
+    const user = userEvent.setup();
+    const { onRename } = renderRow();
+    await user.click(screen.getByRole('button', { name: 'переименовать' }));
+    await user.click(screen.getByRole('button', { name: 'отмена' }));
+
+    expect(onRename).not.toHaveBeenCalled();
+    expect(screen.getByText('Юнит 1')).toBeInTheDocument();
+  });
+
+  it('пустое имя не сохраняется', async () => {
+    const user = userEvent.setup();
+    const { onRename } = renderRow();
+    await user.click(screen.getByRole('button', { name: 'переименовать' }));
+    await user.clear(screen.getByLabelText('Название колоды'));
+    await user.click(screen.getByRole('button', { name: 'Сохранить' }));
+
+    expect(onRename).not.toHaveBeenCalled();
+  });
+
+  it('удаление требует подтверждения', async () => {
+    const user = userEvent.setup();
+    const { onDelete } = renderRow();
+    await user.click(screen.getByRole('button', { name: 'удалить' }));
+
+    expect(screen.getByText('Удалить вместе с прогрессом?')).toBeInTheDocument();
+    expect(onDelete).not.toHaveBeenCalled();
+
+    await user.click(screen.getByRole('button', { name: 'Удалить' }));
+    expect(onDelete).toHaveBeenCalledTimes(1);
+  });
+
+  it('подтверждение удаления можно отменить', async () => {
+    const user = userEvent.setup();
+    const { onDelete } = renderRow();
+    await user.click(screen.getByRole('button', { name: 'удалить' }));
+    await user.click(screen.getByRole('button', { name: 'отмена' }));
+
+    expect(onDelete).not.toHaveBeenCalled();
+    expect(screen.queryByText('Удалить вместе с прогрессом?')).not.toBeInTheDocument();
+  });
+
+  it('выгрузка вызывается сразу', async () => {
+    const user = userEvent.setup();
+    const { onExport } = renderRow();
+    await user.click(screen.getByRole('button', { name: 'выгрузить' }));
+    expect(onExport).toHaveBeenCalledTimes(1);
+  });
+});

@@ -1,5 +1,16 @@
-import { STORAGE_KEY, STORAGE_VERSION, deserialize, loadState, saveState } from '@/core/storage';
+import {
+  LEGACY_STORAGE_KEY,
+  STORAGE_KEY,
+  STORAGE_VERSION,
+  deserialize,
+  loadState,
+  migrateFromV2,
+  saveState,
+} from '@/core/storage';
 import type { StorageLike, StoredState } from '@/core/storage';
+import type { Deck } from '@/core/library';
+
+const AT = new Date('2026-09-14T10:00:00Z');
 
 function memoryStorage(
   initial: Record<string, string> = {},
@@ -14,8 +25,11 @@ function memoryStorage(
   };
 }
 
-const valid: StoredState = {
-  version: STORAGE_VERSION,
+const deck: Deck = {
+  id: 'd1',
+  name: 'Юнит 1',
+  createdAt: AT.toISOString(),
+  lastOpenedAt: AT.toISOString(),
   cards: [{ id: 'c1', hanzi: '你好', pinyin: 'nǐ hǎo', translation: 'привет' }],
   direction: 'hanzi-to-translation',
   session: {
@@ -31,30 +45,22 @@ const valid: StoredState = {
   startedMode: 'simple',
 };
 
+const valid: StoredState = { version: STORAGE_VERSION, decks: [deck], activeDeckId: 'd1' };
+
 describe('saveState и loadState', () => {
-  it('сохраняет и читает состояние без потерь', () => {
+  it('сохраняет и читает библиотеку без потерь', () => {
     const storage = memoryStorage();
     expect(saveState(storage, valid)).toBe(true);
-    expect(loadState(storage)).toEqual(valid);
+    expect(loadState(storage, AT)).toEqual(valid);
   });
 
-  it('пишет ровно по ключу flashcards.v2', () => {
+  it('пишет ровно по ключу flashcards.v3', () => {
     const storage = memoryStorage();
     saveState(storage, valid);
     expect(Object.keys(storage.data)).toEqual([STORAGE_KEY]);
   });
 
-  it('сохраняет сессию колец', () => {
-    const storage = memoryStorage();
-    const ringState: StoredState = {
-      ...valid,
-      session: { mode: 'ring', blocks: [['c1']], blockIndex: 0, queue: ['c1'], finished: false },
-    };
-    saveState(storage, ringState);
-    expect(loadState(storage)).toEqual(ringState);
-  });
-
-  it('возвращает false, если хранилище отказало', () => {
+  it('возвращает false, если запись отказала', () => {
     const failing: StorageLike = {
       getItem: () => null,
       setItem: () => {
@@ -71,84 +77,127 @@ describe('saveState и loadState', () => {
       },
       setItem: () => {},
     };
-    expect(loadState(failing)).toBeNull();
+    expect(loadState(failing, AT)).toBeNull();
+  });
+
+  it('пустое хранилище даёт null', () => {
+    expect(loadState(memoryStorage(), AT)).toBeNull();
   });
 });
 
 describe('deserialize', () => {
-  it('на отсутствующем значении даёт null', () => {
-    expect(deserialize(null)).toBeNull();
-  });
-
   it('на битом JSON даёт null', () => {
     expect(deserialize('{не json')).toBeNull();
   });
 
   it('на чужой версии даёт null', () => {
-    expect(deserialize(JSON.stringify({ ...valid, version: 1 }))).toBeNull();
+    expect(deserialize(JSON.stringify({ ...valid, version: 2 }))).toBeNull();
   });
 
-  it('на неполной структуре даёт null', () => {
-    expect(deserialize(JSON.stringify({ version: STORAGE_VERSION, cards: [] }))).toBeNull();
+  it('на колоде без обязательного поля даёт null', () => {
+    const broken = { ...valid, decks: [{ ...deck, name: undefined }] };
+    expect(deserialize(JSON.stringify(broken))).toBeNull();
   });
 
   it('на неизвестном направлении даёт null', () => {
-    expect(deserialize(JSON.stringify({ ...valid, direction: 'hanzi-to-mars' }))).toBeNull();
-  });
-
-  it('на карточке без поля даёт null', () => {
-    const broken = { ...valid, cards: [{ id: 'c1', hanzi: '你好' }] };
+    const broken = { ...valid, decks: [{ ...deck, direction: 'hanzi-to-mars' }] };
     expect(deserialize(JSON.stringify(broken))).toBeNull();
   });
 
-  it('на сессии с числами вместо идентификаторов даёт null', () => {
-    const broken = { ...valid, session: { ...valid.session, queue: [1, 2] } };
-    expect(deserialize(JSON.stringify(broken))).toBeNull();
-  });
-
-  it('принимает состояние без активной сессии', () => {
-    expect(deserialize(JSON.stringify({ ...valid, session: null }))).not.toBeNull();
-  });
-});
-
-describe('deserialize: связь сессии с колодой', () => {
   it('отвергает сессию, ссылающуюся на отсутствующую карточку', () => {
-    const orphan = {
-      ...valid,
-      session: { ...valid.session, queue: ['нет-такой-карточки'] },
-    };
+    const orphan = { ...valid, decks: [{ ...deck, session: { ...deck.session, queue: ['нет'] } }] };
     expect(deserialize(JSON.stringify(orphan))).toBeNull();
   });
 
-  it('отвергает блок колец с отсутствующей карточкой', () => {
-    const orphan = {
-      ...valid,
-      session: {
-        mode: 'ring',
-        blocks: [['c1'], ['призрак']],
-        blockIndex: 0,
-        queue: ['c1'],
-        finished: false,
-      },
-    };
-    expect(deserialize(JSON.stringify(orphan))).toBeNull();
+  it('проверяет ссылки в каждой колоде, а не только в первой', () => {
+    const second: Deck = { ...deck, id: 'd2', cards: [], session: { ...deck.session!, queue: ['c1'] } };
+    expect(deserialize(JSON.stringify({ ...valid, decks: [deck, second] }))).toBeNull();
   });
 
-  it('принимает сессию, все карточки которой есть в колоде', () => {
-    expect(deserialize(JSON.stringify(valid))).not.toBeNull();
+  it('принимает библиотеку без активной колоды', () => {
+    expect(deserialize(JSON.stringify({ ...valid, activeDeckId: null }))).not.toBeNull();
+  });
+
+  it('принимает пустую библиотеку', () => {
+    expect(deserialize(JSON.stringify({ version: STORAGE_VERSION, decks: [], activeDeckId: null }))).not.toBeNull();
+  });
+
+  it('отвергает активную колоду, которой нет в списке', () => {
+    expect(deserialize(JSON.stringify({ ...valid, activeDeckId: 'призрак' }))).toBeNull();
   });
 });
 
-describe('startedMode', () => {
-  it('сохраняется и читается', () => {
-    const storage = memoryStorage();
-    saveState(storage, { ...valid, startedMode: 'ring' });
-    expect(loadState(storage)?.startedMode).toBe('ring');
+describe('migrateFromV2', () => {
+  const v2 = {
+    version: 2,
+    cards: deck.cards,
+    direction: 'translation-to-hanzi',
+    session: deck.session,
+    stats: { known: 3, unknown: 1 },
+    startedMode: 'ring',
+  };
+
+  it('оборачивает единственную колоду в библиотеку', () => {
+    const migrated = migrateFromV2(JSON.stringify(v2), AT);
+    expect(migrated?.decks).toHaveLength(1);
+    const only = migrated?.decks[0];
+    expect(only?.name).toBe('Колода от 14 сентября 2026');
+    expect(only?.cards).toEqual(deck.cards);
+    expect(only?.direction).toBe('translation-to-hanzi');
+    expect(only?.session).toEqual(deck.session);
+    expect(only?.stats).toEqual({ known: 3, unknown: 1 });
+    expect(only?.startedMode).toBe('ring');
+    expect(migrated?.activeDeckId).toBe(only?.id);
   });
 
-  it('состояние без startedMode остаётся читаемым', () => {
-    const withoutMode: Record<string, unknown> = { ...valid };
+  it('без startedMode подставляет simple', () => {
+    const withoutMode: Record<string, unknown> = { ...v2 };
     delete withoutMode.startedMode;
-    expect(deserialize(JSON.stringify(withoutMode))).not.toBeNull();
+    expect(migrateFromV2(JSON.stringify(withoutMode), AT)?.decks[0]?.startedMode).toBe('simple');
+  });
+
+  it('на отсутствии данных даёт null', () => {
+    expect(migrateFromV2(null, AT)).toBeNull();
+  });
+
+  it('на битых данных даёт null', () => {
+    expect(migrateFromV2('{не json', AT)).toBeNull();
+    expect(migrateFromV2(JSON.stringify({ version: 1 }), AT)).toBeNull();
+  });
+});
+
+describe('loadState: перенос', () => {
+  it('читает v2, если v3 ещё нет', () => {
+    const storage = memoryStorage({
+      [LEGACY_STORAGE_KEY]: JSON.stringify({
+        version: 2,
+        cards: deck.cards,
+        direction: 'hanzi-to-translation',
+        session: null,
+        stats: { known: 0, unknown: 0 },
+      }),
+    });
+    expect(loadState(storage, AT)?.decks).toHaveLength(1);
+  });
+
+  it('v3 имеет приоритет над v2', () => {
+    const storage = memoryStorage({
+      [STORAGE_KEY]: JSON.stringify(valid),
+      [LEGACY_STORAGE_KEY]: JSON.stringify({
+        version: 2, cards: [], direction: 'hanzi-to-translation', session: null,
+        stats: { known: 0, unknown: 0 },
+      }),
+    });
+    expect(loadState(storage, AT)?.decks[0]?.name).toBe('Юнит 1');
+  });
+
+  it('не трогает и не удаляет старый ключ', () => {
+    const legacy = JSON.stringify({
+      version: 2, cards: deck.cards, direction: 'hanzi-to-translation', session: null,
+      stats: { known: 0, unknown: 0 },
+    });
+    const storage = memoryStorage({ [LEGACY_STORAGE_KEY]: legacy });
+    loadState(storage, AT);
+    expect(storage.data[LEGACY_STORAGE_KEY]).toBe(legacy);
   });
 });

@@ -1,19 +1,20 @@
 import { DIRECTIONS } from '@/core/deck';
 import type { Card, Direction } from '@/core/deck';
+import { createDeck } from '@/core/library';
+import type { Deck } from '@/core/library';
 import type { Session, SessionMode, Stats } from '@/core/session';
+import { suggestedName } from '@/core/library';
 
-export const STORAGE_KEY = 'flashcards.v2';
-export const STORAGE_VERSION = 2;
+export const STORAGE_KEY = 'flashcards.v3';
+export const STORAGE_VERSION = 3;
+
+/** Формат Этапа 0. Читается один раз при переносе и никогда не изменяется. */
+export const LEGACY_STORAGE_KEY = 'flashcards.v2';
 
 export type StoredState = {
   version: typeof STORAGE_VERSION;
-  cards: Card[];
-  direction: Direction;
-  session: Session | null;
-  stats: Stats;
-  /** Режим, которым сессия была запущена. Необязателен: состояния, записанные
-   *  до появления поля, должны оставаться читаемыми. */
-  startedMode?: SessionMode;
+  decks: Deck[];
+  activeDeckId: string | null;
 };
 
 /** Минимальный контракт хранилища. localStorage ему удовлетворяет. */
@@ -33,9 +34,38 @@ export function deserialize(raw: string | null): StoredState | null {
   return isStoredState(parsed) ? parsed : null;
 }
 
-export function loadState(storage: StorageLike): StoredState | null {
+/** Единственная колода Этапа 0 становится первой колодой библиотеки. */
+export function migrateFromV2(raw: string | null, now: Date): StoredState | null {
+  if (raw === null) return null;
+  let parsed: unknown;
   try {
-    return deserialize(storage.getItem(STORAGE_KEY));
+    parsed = JSON.parse(raw);
+  } catch {
+    return null;
+  }
+  if (!isRecord(parsed) || parsed.version !== 2) return null;
+  if (!Array.isArray(parsed.cards) || !parsed.cards.every(isCard)) return null;
+  if (typeof parsed.direction !== 'string' || !DIRECTIONS.includes(parsed.direction as Direction)) {
+    return null;
+  }
+  if (!isStats(parsed.stats)) return null;
+  if (parsed.session !== null && !isSession(parsed.session)) return null;
+
+  const deck: Deck = {
+    ...createDeck(suggestedName(now), parsed.cards, now),
+    direction: parsed.direction as Direction,
+    session: parsed.session as Session | null,
+    stats: parsed.stats,
+    startedMode: parsed.startedMode === 'ring' ? 'ring' : 'simple',
+  };
+  return { version: STORAGE_VERSION, decks: [deck], activeDeckId: deck.id };
+}
+
+export function loadState(storage: StorageLike, now: Date): StoredState | null {
+  try {
+    const current = deserialize(storage.getItem(STORAGE_KEY));
+    if (current !== null) return current;
+    return migrateFromV2(storage.getItem(LEGACY_STORAGE_KEY), now);
   } catch {
     return null;
   }
@@ -96,35 +126,53 @@ function isStats(value: unknown): value is Stats {
   return isRecord(value) && typeof value.known === 'number' && typeof value.unknown === 'number';
 }
 
-function isStoredState(value: unknown): value is StoredState {
+function isMode(value: unknown): value is SessionMode {
+  return value === 'simple' || value === 'ring';
+}
+
+/** Идентификаторы карточек, на которые ссылается сессия. */
+export function sessionCardIds(session: Session): string[] {
+  return session.mode === 'ring'
+    ? [...session.queue, ...session.blocks.flat()]
+    : [...session.queue, ...session.nextRound];
+}
+
+function isDeck(value: unknown): value is Deck {
   if (
     !isRecord(value) ||
-    value.version !== STORAGE_VERSION ||
+    typeof value.id !== 'string' ||
+    typeof value.name !== 'string' ||
+    typeof value.createdAt !== 'string' ||
+    typeof value.lastOpenedAt !== 'string' ||
     !Array.isArray(value.cards) ||
     !value.cards.every(isCard) ||
     typeof value.direction !== 'string' ||
     !DIRECTIONS.includes(value.direction as Direction) ||
-    !isStats(value.stats)
+    !isStats(value.stats) ||
+    !isMode(value.startedMode)
   ) {
-    return false;
-  }
-
-  if (value.startedMode !== undefined && value.startedMode !== 'simple' && value.startedMode !== 'ring') {
     return false;
   }
 
   if (value.session === null) return true;
   if (!isSession(value.session)) return false;
 
-  // Сессия, ссылающаяся на отсутствующую карточку, даёт экран тренировки
-  // без карточки и без единой кнопки. Такое состояние лучше отвергнуть
-  // здесь, чем показывать пользователю пустую страницу.
+  // Сессия, ссылающаяся на отсутствующую карточку, даёт экран тренировки без
+  // карточки и без единой кнопки. Такое состояние отвергается здесь.
   const known = new Set(value.cards.map((card) => card.id));
   return sessionCardIds(value.session).every((id) => known.has(id));
 }
 
-function sessionCardIds(session: Session): string[] {
-  return session.mode === 'ring'
-    ? [...session.queue, ...session.blocks.flat()]
-    : [...session.queue, ...session.nextRound];
+function isStoredState(value: unknown): value is StoredState {
+  if (
+    !isRecord(value) ||
+    value.version !== STORAGE_VERSION ||
+    !Array.isArray(value.decks) ||
+    !value.decks.every(isDeck)
+  ) {
+    return false;
+  }
+  if (value.activeDeckId === null) return true;
+  if (typeof value.activeDeckId !== 'string') return false;
+  return value.decks.some((deck) => deck.id === value.activeDeckId);
 }

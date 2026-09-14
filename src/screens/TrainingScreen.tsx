@@ -135,7 +135,12 @@ export default function TrainingScreen() {
 
       <Counters known={stats.known} unknown={stats.unknown} />
 
-      {banner !== '' && <p className="training__banner">{banner}</p>}
+      {/* Слот рендерится всегда: монтирование по условию сдвигало бы
+          карточку и кнопки под ней на строку. Высота слота держится
+          в CSS, живой регион работает только если элемент уже в DOM. */}
+      <p className="training__banner" data-testid="stage-banner" aria-live="polite">
+        {banner}
+      </p>
 
       <Card
         front={frontFace(card, direction)}

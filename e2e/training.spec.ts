@@ -1,4 +1,5 @@
 import { expect, test } from '@playwright/test';
+import type { Locator } from '@playwright/test';
 
 const WORDS = [
   ['你好', 'ni3 hao3', 'привет'],
@@ -38,6 +39,44 @@ test('режим колец проходится до экрана итогов'
 
   await expect(page.getByRole('heading', { name: 'Готово' })).toBeVisible();
   await expect(page.getByText('Знаю: 16 · Не знаю: 0')).toBeVisible();
+});
+
+/** Прямоугольник элемента. Отдельной функцией, чтобы `null` от невидимого
+ *  элемента падал внятным сообщением, а не сравнением с undefined. */
+async function boxOf(locator: Locator) {
+  const box = await locator.boundingBox();
+  if (box === null) throw new Error('элемент не занимает места на странице');
+  return box;
+}
+
+// Баннер о смене блока раньше монтировался в поток и сдвигал карточку с кнопками
+// на строку вниз, так что клик в «Знаю» попадал в «Показать ответ». Проверка
+// живёт в e2e: в jsdom нет раскладки, и юнит-тест такое поймать не может.
+test('смена блока не сдвигает кнопки', async ({ page }) => {
+  await page.goto('/');
+  await page.getByLabel('Таблица со словами').fill(TABLE);
+  await page.getByRole('button', { name: 'Создать колоду' }).click();
+  await page.getByRole('button', { name: 'Заучивание кольцами по 7' }).click();
+  await expect(page.getByText('Блок 1 из 2 · осталось 7')).toBeVisible();
+
+  const banner = page.getByTestId('stage-banner');
+  const know = page.getByRole('button', { name: 'Знаю' });
+
+  // Пустой слот держит высоту строки: иначе появление текста раздвинет колонку.
+  await expect(banner).toBeEmpty();
+  expect((await boxOf(banner)).height).toBeGreaterThan(0);
+
+  const before = (await boxOf(know)).y;
+
+  // Семь карточек первого блока — после последней начинается блок 2.
+  for (let done = 1; done <= 7; done += 1) {
+    await know.click();
+    await expect(page.getByTestId('count-known')).toHaveText(String(done));
+  }
+
+  // Баннер виден 1800 мс; позиция кнопки меряется, пока он на экране.
+  await expect(banner).toHaveText('Блок 2 из 2');
+  expect((await boxOf(know)).y).toBeCloseTo(before, 0);
 });
 
 test('пиньинь показан с диакритикой', async ({ page }) => {

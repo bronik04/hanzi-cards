@@ -152,6 +152,33 @@ describe('TrainingScreen', () => {
     }
   });
 
+  it('слот баннера всегда в разметке: меняется только текст', () => {
+    vi.useFakeTimers();
+    try {
+      renderWithProvider(<TrainingScreen />, trainingState());
+
+      const banner = screen.getByTestId('stage-banner');
+      expect(banner).toBeEmptyDOMElement();
+
+      // Влево, вправо, вправо — круг закрыт с ошибкой, начинается круг 2.
+      swipeWithTimers('ArrowLeft');
+      swipeWithTimers('ArrowRight');
+      swipeWithTimers('ArrowRight');
+
+      // Ссылка на тот же узел, а не новый поиск: если баннер снова начнут
+      // монтировать по условию, здесь окажется отсоединённый пустой абзац.
+      expect(banner).toHaveTextContent('Круг 2');
+
+      act(() => {
+        vi.advanceTimersByTime(3000);
+      });
+      expect(banner).toBeEmptyDOMElement();
+      expect(screen.getByTestId('stage-banner')).toBe(banner);
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
   it('показывает выход, если карточка сессии не найдена', () => {
     renderWithProvider(<TrainingScreen />, { ...trainingState(), cards: [] });
     expect(screen.getByRole('button', { name: 'В меню' })).toBeInTheDocument();

@@ -516,3 +516,25 @@
   gap: var(--gap);
   justify-content: center;
 }
+
+.import__name {
+  width: min(90vw, 48rem);
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  text-align: left;
+}
+
+.import__name span {
+  color: var(--text-muted);
+  font-size: 0.9rem;
+}
+
+.import__name input {
+  font: inherit;
+  padding: 0.6rem var(--gap);
+  color: var(--text);
+  background: var(--surface);
+  border: 1px solid var(--surface-raised);
+  border-radius: var(--radius);
+}

@@ -21,6 +21,8 @@ export default function ImportScreen() {
   const [text, setText] = useState('');
   const [columnMode, setColumnMode] = useState<ColumnMode>('auto');
   const [fileError, setFileError] = useState('');
+  const [name, setName] = useState(() => suggestedName(new Date()));
+  const [nameTouched, setNameTouched] = useState(false);
   const fileInput = useRef<HTMLInputElement>(null);
 
   const result = useMemo(() => parseTable(text, columnMode), [text, columnMode]);
@@ -34,6 +36,8 @@ export default function ImportScreen() {
     reader.onload = () => {
       setFileError('');
       setText(String(reader.result ?? ''));
+      // Имя файла подсказывает имя колоды, но только пока пользователь не ввёл своё.
+      if (!nameTouched) setName(file.name.replace(/\.[^.]+$/, ''));
     };
     // Молча очищать поле нельзя: со стороны это выглядит так, будто
     // приложение съело уже набранную таблицу.
@@ -44,7 +48,18 @@ export default function ImportScreen() {
 
   return (
     <section className="screen">
-      <h1>Вставьте таблицу со словами</h1>
+      <h1>Новая колода</h1>
+
+      <label className="import__name">
+        <span>Название колоды</span>
+        <input
+          value={name}
+          onChange={(event) => {
+            setNameTouched(true);
+            setName(event.target.value);
+          }}
+        />
+      </label>
 
       <textarea
         className="import__textarea"
@@ -62,6 +77,7 @@ export default function ImportScreen() {
           ref={fileInput}
           type="file"
           accept=".csv,.tsv,.txt,text/csv,text/plain"
+          aria-label="Файл с таблицей"
           hidden
           onChange={handleFile}
         />
@@ -116,7 +132,7 @@ export default function ImportScreen() {
         onClick={() =>
           dispatch({
             type: 'deck-created',
-            name: suggestedName(new Date()),
+            name: name.trim() === '' ? suggestedName(new Date()) : name.trim(),
             cards: assignIds(result.cards),
             now: new Date(),
           })

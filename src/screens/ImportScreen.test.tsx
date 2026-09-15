@@ -58,4 +58,34 @@ describe('ImportScreen', () => {
     renderWithProvider(<ImportScreen />);
     expect(screen.queryByRole('button', { name: 'Отменить' })).not.toBeInTheDocument();
   });
+
+  it('подставляет имя-подсказку', () => {
+    renderWithProvider(<ImportScreen />);
+    const field = screen.getByLabelText('Название колоды');
+    expect((field as HTMLInputElement).value.startsWith('Колода от')).toBe(true);
+  });
+
+  it('имя файла становится подсказкой', async () => {
+    const user = userEvent.setup();
+    renderWithProvider(<ImportScreen />);
+
+    const file = new File(['你好\tni3 hao3\tпривет'], 'Юнит 5.tsv', { type: 'text/plain' });
+    await user.upload(screen.getByLabelText('Файл с таблицей'), file);
+
+    expect(await screen.findByDisplayValue('Юнит 5')).toBeInTheDocument();
+  });
+
+  it('введённое имя не затирается подсказкой из файла', async () => {
+    const user = userEvent.setup();
+    renderWithProvider(<ImportScreen />);
+
+    const field = screen.getByLabelText('Название колоды');
+    await user.clear(field);
+    await user.type(field, 'Моё имя');
+
+    const file = new File(['你好\tni3 hao3\tпривет'], 'Юнит 5.tsv', { type: 'text/plain' });
+    await user.upload(screen.getByLabelText('Файл с таблицей'), file);
+
+    expect(field).toHaveValue('Моё имя');
+  });
 });

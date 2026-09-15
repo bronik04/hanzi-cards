@@ -161,11 +161,17 @@ describe('TrainingScreen', () => {
   // Таймер dispatch({type:'swiped'}) стоит EXIT_DURATION мс: клик по выходу
   // раньше, чем он отработает, уводил с экрана и снимался эффектом очистки,
   // так и не дождавшись dispatch — только что сделанный свайп пропадал молча.
+  //
+  // fireEvent вместо userEvent — нарочно: disabled нужно проверить внутри
+  // настоящего 220-мс окна анимации (фейковые таймеры здесь не годятся, см.
+  // комментарий выше про их связку с userEvent), а асинхронные накладные
+  // расходы userEvent на загруженной машине способны съесть это окно между
+  // кликом и проверкой. fireEvent.click синхронный: состояние обновляется
+  // до возврата из вызова, и проверка не зависит от реального времени.
   it('«В библиотеку» и «Загрузить новую таблицу» недоступны, пока карточка уезжает: свайп не теряется', async () => {
-    const user = userEvent.setup();
     renderWithProvider(<TrainingWithProbe />, trainingState());
 
-    await user.click(screen.getByRole('button', { name: 'Знаю' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Знаю' }));
 
     // Карточка ещё уезжает: выходы недоступны, а не просто отложены.
     const exitButton = screen.getByRole('button', { name: 'В библиотеку' });
@@ -174,7 +180,7 @@ describe('TrainingScreen', () => {
     expect(importButton).toBeDisabled();
 
     // Клик по недоступной кнопке ничего не делает — свайп ещё не потерян.
-    await user.click(exitButton);
+    fireEvent.click(exitButton);
     expect(screen.getByTestId('screen')).toHaveTextContent('training');
 
     await screen.findByText('谢谢');
@@ -182,7 +188,7 @@ describe('TrainingScreen', () => {
     expect(exitButton).not.toBeDisabled();
     expect(importButton).not.toBeDisabled();
 
-    await user.click(exitButton);
+    fireEvent.click(exitButton);
     expect(screen.getByTestId('screen')).toHaveTextContent('library');
     // Свайп дожил до выхода: счётчик и прогресс сессии не потерялись.
     expect(screen.getByTestId('card-id')).toHaveTextContent('c2');

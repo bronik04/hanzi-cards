@@ -57,6 +57,25 @@ describe('exportLibraryJson и parseLibraryJson', () => {
     }
   });
 
+  // Наличие числового version — не признак библиотеки: package.json тоже
+  // подходит под это описание, и его не стоит выдавать за библиотеку другой
+  // версии.
+  it('чужой файл с числовым version, но без decks, получает общее сообщение', () => {
+    const packageJson = JSON.stringify({ name: 'hanzi-cards', version: 1 });
+    const result = parseLibraryJson(packageJson);
+    expect(result.ok).toBe(false);
+    if (!result.ok) expect(result.error).toBe('Файл не похож на сохранённую библиотеку');
+  });
+
+  it('библиотека v4-формы всё ещё получает сообщение о версии', () => {
+    const futureLibrary = JSON.stringify({ version: 4, decks: [] });
+    const result = parseLibraryJson(futureLibrary);
+    expect(result.ok).toBe(false);
+    if (!result.ok) {
+      expect(result.error).toBe(`Файл сохранён другой версией библиотеки (4 вместо ${STORAGE_VERSION})`);
+    }
+  });
+
   it('сообщение о версии отличается от сообщения «не похож на библиотеку»', () => {
     const notLibrary = parseLibraryJson('{не json');
     const wrongVersion = parseLibraryJson(JSON.stringify({ version: 99, decks: [] }));

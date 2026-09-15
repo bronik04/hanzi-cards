@@ -35,7 +35,12 @@ export function parseLibraryJson(raw: string): ImportResult {
   return { ok: true, decks };
 }
 
-/** Номер версии из файла, если это вообще JSON-объект и версия — не текущая. */
+/**
+ * Номер версии из файла, если это вообще похоже на библиотеку другой версии:
+ * JSON-объект с числовым version (не текущим) и decks-массивом. Одного
+ * числового version мало — под это описание подходит и package.json, а он не
+ * библиотека вовсе.
+ */
 function mismatchedVersion(raw: string): number | null {
   let parsed: unknown;
   try {
@@ -44,8 +49,9 @@ function mismatchedVersion(raw: string): number | null {
     return null;
   }
   if (typeof parsed !== 'object' || parsed === null) return null;
-  const version = (parsed as { version?: unknown }).version;
-  return typeof version === 'number' && version !== STORAGE_VERSION ? version : null;
+  const { version, decks } = parsed as { version?: unknown; decks?: unknown };
+  if (typeof version !== 'number' || version === STORAGE_VERSION) return null;
+  return Array.isArray(decks) ? version : null;
 }
 
 /**

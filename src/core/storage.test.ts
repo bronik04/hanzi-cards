@@ -8,7 +8,7 @@ import {
   parseDeckList,
   saveState,
 } from '@/core/storage';
-import type { StorageLike, StoredState } from '@/core/storage';
+import type { LoadOutcome, StorageLike, StoredState } from '@/core/storage';
 import type { Deck } from '@/core/library';
 
 const AT = new Date('2026-09-14T10:00:00Z');
@@ -48,11 +48,24 @@ const deck: Deck = {
 
 const valid: StoredState = { version: STORAGE_VERSION, decks: [deck], activeDeckId: 'd1' };
 
+/** Состояние удачной загрузки; иначе null, чтобы тест падал по существу. */
+function restoredState(outcome: LoadOutcome): StoredState | null {
+  return outcome.status === 'restored' ? outcome.state : null;
+}
+
+const LEGACY_V2 = JSON.stringify({
+  version: 2,
+  cards: deck.cards,
+  direction: 'hanzi-to-translation',
+  session: null,
+  stats: { known: 0, unknown: 0 },
+});
+
 describe('saveState и loadState', () => {
   it('сохраняет и читает библиотеку без потерь', () => {
     const storage = memoryStorage();
     expect(saveState(storage, valid)).toBe(true);
-    expect(loadState(storage, AT)).toEqual(valid);
+    expect(restoredState(loadState(storage, AT))).toEqual(valid);
   });
 
   it('сохраняет сессию колец', () => {
@@ -67,7 +80,7 @@ describe('saveState и loadState', () => {
       ],
     };
     expect(saveState(storage, ringState)).toBe(true);
-    expect(loadState(storage, AT)).toEqual(ringState);
+    expect(restoredState(loadState(storage, AT))).toEqual(ringState);
   });
 
   it('пишет ровно по ключу flashcards.v3', () => {
@@ -93,11 +106,31 @@ describe('saveState и loadState', () => {
       },
       setItem: () => {},
     };
-    expect(loadState(failing, AT)).toBeNull();
+    expect(loadState(failing, AT)).toEqual({ status: 'empty' });
   });
 
-  it('пустое хранилище даёт null', () => {
-    expect(loadState(memoryStorage(), AT)).toBeNull();
+  it('пустое хранилище даёт empty', () => {
+    expect(loadState(memoryStorage(), AT)).toEqual({ status: 'empty' });
+  });
+
+  // Пустое и нечитаемое различаются именно здесь: поверх пустого пишут сразу,
+  // а поверх нечитаемого писать нельзя — это единственная копия библиотеки.
+  it('нечитаемое значение v3 не выдаётся за пустое хранилище', () => {
+    const storage = memoryStorage({ [STORAGE_KEY]: '{не json' });
+    expect(loadState(storage, AT)).toEqual({ status: 'unreadable' });
+  });
+
+  it('v3 непроходящий проверку тоже даёт unreadable', () => {
+    const broken = JSON.stringify({ ...valid, decks: [{ ...deck, name: undefined }] });
+    expect(loadState(memoryStorage({ [STORAGE_KEY]: broken }), AT)).toEqual({
+      status: 'unreadable',
+    });
+  });
+
+  // Иначе колода Этапа 0 молча стала бы всей библиотекой и легла поверх v3.
+  it('нечитаемый v3 не откатывается на перенос из v2', () => {
+    const storage = memoryStorage({ [STORAGE_KEY]: '{не json', [LEGACY_STORAGE_KEY]: LEGACY_V2 });
+    expect(loadState(storage, AT)).toEqual({ status: 'unreadable' });
   });
 });
 
@@ -258,7 +291,7 @@ describe('loadState: перенос', () => {
         stats: { known: 0, unknown: 0 },
       }),
     });
-    expect(loadState(storage, AT)?.decks).toHaveLength(1);
+    expect(restoredState(loadState(storage, AT))?.decks).toHaveLength(1);
   });
 
   it('v3 имеет приоритет над v2', () => {
@@ -269,7 +302,7 @@ describe('loadState: перенос', () => {
         stats: { known: 0, unknown: 0 },
       }),
     });
-    expect(loadState(storage, AT)?.decks[0]?.name).toBe('Юнит 1');
+    expect(restoredState(loadState(storage, AT))?.decks[0]?.name).toBe('Юнит 1');
   });
 
   it('не трогает и не удаляет старый ключ', () => {

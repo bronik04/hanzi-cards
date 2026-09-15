@@ -1,7 +1,7 @@
 import { useEffect, useRef } from 'react';
 import type { Dispatch } from 'react';
 import { STORAGE_VERSION, loadState, saveState } from '@/core/storage';
-import type { StorageLike } from '@/core/storage';
+import type { LoadOutcome, StorageLike } from '@/core/storage';
 import type { AppAction, AppState } from '@/state/appReducer';
 
 /** localStorage недоступен в некоторых приватных режимах — обращение к нему бросает. */
@@ -25,17 +25,24 @@ export function usePersistence(
     if (loadAttempted.current) return;
     loadAttempted.current = true;
 
-    const restored = storage === null ? null : loadState(storage, new Date());
-    if (restored === null) {
-      dispatch({ type: 'hydration-finished' });
+    const outcome: LoadOutcome =
+      storage === null ? { status: 'empty' } : loadState(storage, new Date());
+    if (outcome.status === 'restored') {
+      dispatch({ type: 'restore', stored: outcome.state });
       return;
     }
-    dispatch({ type: 'restore', stored: restored });
+    if (outcome.status === 'unreadable') {
+      dispatch({ type: 'storage-unreadable' });
+      return;
+    }
+    dispatch({ type: 'hydration-finished' });
   }, [dispatch, storage]);
 
   useEffect(() => {
     // Запись до гидратации затёрла бы сохранённую библиотеку пустой начальной.
-    if (!state.hydrated || storage === null) return;
+    // Нечитаемое значение затёрла бы точно так же — с той разницей, что его
+    // ещё можно разобрать руками, пока оно цело.
+    if (!state.hydrated || storage === null || state.storageUnreadable) return;
 
     const saved = saveState(storage, {
       version: STORAGE_VERSION,
@@ -45,5 +52,13 @@ export function usePersistence(
     if (!saved && !state.storageFailed) {
       dispatch({ type: 'storage-failed' });
     }
-  }, [state.hydrated, state.decks, state.activeDeckId, state.storageFailed, dispatch, storage]);
+  }, [
+    state.hydrated,
+    state.decks,
+    state.activeDeckId,
+    state.storageFailed,
+    state.storageUnreadable,
+    dispatch,
+    storage,
+  ]);
 }

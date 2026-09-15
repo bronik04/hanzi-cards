@@ -226,4 +226,10 @@ describe('навигация', () => {
   it('storage-failed поднимает флаг', () => {
     expect(appReducer(initialState, { type: 'storage-failed' }).storageFailed).toBe(true);
   });
+
+  it('storage-unreadable поднимает флаг и завершает гидратацию', () => {
+    const state = appReducer(initialState, { type: 'storage-unreadable' });
+    expect(state.storageUnreadable).toBe(true);
+    expect(state.hydrated).toBe(true);
+  });
 });

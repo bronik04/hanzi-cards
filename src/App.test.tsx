@@ -191,6 +191,17 @@ describe('App: полный цикл', () => {
     expect(warning).toHaveTextContent('Сохраните библиотеку в файл, чтобы не потерять колоды.');
   });
 
+  it('предупреждает, если сохранённую библиотеку не удалось прочитать', () => {
+    const { storage } = memoryStorage({ [STORAGE_KEY]: '{не json' });
+    render(<App storage={storage} />);
+
+    const warning = screen.getByText('Сохранённую библиотеку не удалось прочитать', {
+      exact: false,
+    });
+    expect(warning).toHaveTextContent('она осталась в браузере нетронутой');
+    expect(warning).toHaveTextContent('Откройте библиотеку и загрузите её из файла.');
+  });
+
   it('выбранное направление применяется к тренировке', async () => {
     const user = userEvent.setup();
     const { storage } = memoryStorage();

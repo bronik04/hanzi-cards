@@ -16,6 +16,16 @@ export type StoredState = {
   activeDeckId: string | null;
 };
 
+/**
+ * Чем кончилась попытка прочитать хранилище. `empty` и `unreadable` разделены
+ * намеренно: поверх пустого хранилища пишут сразу, а нечитаемое значение —
+ * единственная копия библиотеки, и запись поверх него уничтожает её.
+ */
+export type LoadOutcome =
+  | { status: 'restored'; state: StoredState }
+  | { status: 'empty' }
+  | { status: 'unreadable' };
+
 /** Минимальный контракт хранилища. localStorage ему удовлетворяет. */
 export type StorageLike = {
   getItem(key: string): string | null;
@@ -63,13 +73,20 @@ export function migrateFromV2(raw: string | null, now: Date): StoredState | null
   return isDeck(deck) ? { version: STORAGE_VERSION, decks: [deck], activeDeckId: deck.id } : null;
 }
 
-export function loadState(storage: StorageLike, now: Date): StoredState | null {
+export function loadState(storage: StorageLike, now: Date): LoadOutcome {
   try {
-    const current = deserialize(storage.getItem(STORAGE_KEY));
-    if (current !== null) return current;
-    return migrateFromV2(storage.getItem(LEGACY_STORAGE_KEY), now);
+    const raw = storage.getItem(STORAGE_KEY);
+    if (raw !== null) {
+      const current = deserialize(raw);
+      // Ключ на месте, но не читается. Перенос из v2 здесь запрещён: колода
+      // Этапа 0 молча стала бы всей библиотекой и легла бы поверх v3.
+      return current === null ? { status: 'unreadable' } : { status: 'restored', state: current };
+    }
+    const migrated = migrateFromV2(storage.getItem(LEGACY_STORAGE_KEY), now);
+    return migrated === null ? { status: 'empty' } : { status: 'restored', state: migrated };
   } catch {
-    return null;
+    // Хранилище недоступно целиком: спасать нечего, и о записи скажет saveState.
+    return { status: 'empty' };
   }
 }
 

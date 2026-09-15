@@ -24,6 +24,8 @@ export type AppState = {
   /** true после того, как попытка прочитать хранилище завершилась — успехом или нет. */
   hydrated: boolean;
   storageFailed: boolean;
+  /** Сохранённая библиотека не прочиталась: её значение цело, и запись запрещена. */
+  storageUnreadable: boolean;
 };
 
 /** Действия, которым нужна открытая колода. */
@@ -45,6 +47,7 @@ export type AppAction =
   | { type: 'go-to-library' }
   | { type: 'go-to-import' }
   | { type: 'storage-failed' }
+  | { type: 'storage-unreadable' }
   | DeckAction;
 
 export const initialState: AppState = {
@@ -53,6 +56,7 @@ export const initialState: AppState = {
   screen: 'import',
   hydrated: false,
   storageFailed: false,
+  storageUnreadable: false,
 };
 
 export function activeDeck(state: AppState): Deck | null {
@@ -122,6 +126,11 @@ export function appReducer(state: AppState, action: AppAction): AppState {
 
     case 'storage-failed':
       return { ...state, storageFailed: true };
+
+    // Гидратация закончена, но пустой библиотекой: записывать её поверх
+    // нечитаемого значения нельзя, поэтому флаг заодно запрещает запись.
+    case 'storage-unreadable':
+      return { ...state, hydrated: true, storageUnreadable: true };
 
     case 'direction-changed':
     case 'session-started':

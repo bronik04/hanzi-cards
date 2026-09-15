@@ -209,17 +209,29 @@ describe('навигация', () => {
     expect(appReducer(state, { type: 'go-to-library' }).screen).toBe('library');
   });
 
-  it('decks-imported заменяет список и ведёт в библиотеку', () => {
+  it('decks-imported добавляет колоды к существующим и ведёт в библиотеку', () => {
     const imported = [createDeck('Из файла', cards, AT)];
     const state = appReducer(withOneDeck(), { type: 'decks-imported', decks: imported });
-    expect(state.decks.map((d) => d.name)).toEqual(['Из файла']);
+    expect(state.decks.map((d) => d.name)).toEqual(['Юнит 1', 'Из файла']);
     expect(state.screen).toBe('library');
   });
 
-  it('decks-imported сбрасывает activeDeckId, если его не стало в новом списке', () => {
+  it('decks-imported разводит совпавшие имена', () => {
+    const imported = [createDeck('Юнит 1', cards, AT)];
+    const state = appReducer(withOneDeck(), { type: 'decks-imported', decks: imported });
+    expect(state.decks.map((d) => d.name)).toEqual(['Юнит 1', 'Юнит 1 (2)']);
+  });
+
+  it('decks-imported не трогает активную колоду', () => {
     const state = withOneDeck();
     const imported = [createDeck('Из файла', cards, AT)];
     const result = appReducer(state, { type: 'decks-imported', decks: imported });
+    expect(result.activeDeckId).toBe(state.activeDeckId);
+  });
+
+  it('decks-imported сбрасывает висячий activeDeckId', () => {
+    const state = { ...withOneDeck(), activeDeckId: 'призрак' };
+    const result = appReducer(state, { type: 'decks-imported', decks: [] });
     expect(result.activeDeckId).toBeNull();
   });
 

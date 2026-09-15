@@ -7,7 +7,6 @@ import {
   exportDeckTable,
   exportLibraryJson,
   libraryFileName,
-  mergeImportedDecks,
   parseLibraryJson,
 } from '@/core/transfer';
 import { downloadText } from '@/lib/download';
@@ -32,7 +31,7 @@ export default function LibraryScreen() {
         return;
       }
       setFileError('');
-      dispatch({ type: 'decks-imported', decks: mergeImportedDecks(decks, result.decks) });
+      dispatch({ type: 'decks-imported', decks: result.decks });
     };
     // Молча оставлять пустой экран нельзя: со стороны это выглядит как ничего.
     reader.onerror = () => setFileError(`Не удалось прочитать файл «${file.name}»`);

@@ -14,6 +14,7 @@ import type { Deck } from '@/core/library';
 import { createSession, swipe } from '@/core/session';
 import type { SessionMode, SwipeDirection } from '@/core/session';
 import type { StoredState } from '@/core/storage';
+import { mergeImportedDecks } from '@/core/transfer';
 
 export type Screen = 'library' | 'import' | 'resume' | 'mode' | 'training' | 'done';
 
@@ -43,6 +44,7 @@ export type AppAction =
   | { type: 'deck-opened'; id: string; now: Date }
   | { type: 'deck-renamed'; id: string; name: string }
   | { type: 'deck-deleted'; id: string }
+  /** `decks` — колоды из файла: слияние с библиотекой делает редьюсер. */
   | { type: 'decks-imported'; decks: Deck[] }
   | { type: 'go-to-library' }
   | { type: 'go-to-import' }
@@ -110,12 +112,16 @@ export function appReducer(state: AppState, action: AppAction): AppState {
       };
 
     case 'decks-imported': {
+      // Слияние здесь, а не в обработчике файла: тот замыкает список колод на
+      // рендер, где началось чтение, и правку, сделанную пока файл читался,
+      // вычислил бы обратно. Заодно ни один вызов не заменит библиотеку.
+      const decks = mergeImportedDecks(state.decks, action.decks);
       // Висячий activeDeckId рушит инвариант isStoredState — следующая
       // загрузка хранилища сочла бы состояние повреждённым и стёрла библиотеку.
-      const activeDeckId = action.decks.some((deck) => deck.id === state.activeDeckId)
+      const activeDeckId = decks.some((deck) => deck.id === state.activeDeckId)
         ? state.activeDeckId
         : null;
-      return { ...state, decks: action.decks, activeDeckId, screen: 'library' };
+      return { ...state, decks, activeDeckId, screen: 'library' };
     }
 
     case 'go-to-library':

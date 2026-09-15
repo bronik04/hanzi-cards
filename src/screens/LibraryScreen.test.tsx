@@ -1,4 +1,4 @@
-import { screen } from '@testing-library/react';
+import { act, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import LibraryScreen from '@/screens/LibraryScreen';
 import { renderWithProvider } from '@/test/render';
@@ -39,9 +39,33 @@ function fileInput(container: HTMLElement): HTMLInputElement {
   return container.querySelector('input[type="file"]') as HTMLInputElement;
 }
 
+/** Чтения, остановленные на середине: настоящий FileReader в jsdom успевает
+ *  закончить до возврата из upload, и вклиниться между ними иначе нельзя. */
+const pendingReads: Array<{ finish: () => Promise<void> }> = [];
+
+class PausedFileReader {
+  onload: (() => void) | null = null;
+  onerror: (() => void) | null = null;
+  result: string | null = null;
+
+  readAsText(file: File) {
+    pendingReads.push({
+      finish: async () => {
+        this.result = await file.text();
+        this.onload?.();
+      },
+    });
+  }
+}
+
 describe('LibraryScreen', () => {
   beforeEach(() => {
     downloads.length = 0;
+    pendingReads.length = 0;
+  });
+
+  afterEach(() => {
+    vi.unstubAllGlobals();
   });
 
   it('пустая библиотека предлагает добавить первую колоду', () => {
@@ -109,6 +133,30 @@ describe('LibraryScreen', () => {
 
     expect(screen.getByText('Импорт')).toBeInTheDocument();
     expect(screen.getByText('Импорт (2)')).toBeInTheDocument();
+  });
+
+  // Слияние в обработчике замыкает список колод на тот рендер, где началось
+  // чтение файла: правка, сделанная за время чтения, вычисляется обратно.
+  it('удаление колоды во время чтения файла не отменяется загрузкой', async () => {
+    const user = userEvent.setup();
+    vi.stubGlobal('FileReader', PausedFileReader);
+    const { container } = renderWithProvider(<LibraryScreen />, withDecks());
+
+    await user.upload(fileInput(container), libraryFile([createDeck('Импорт', cards, AT)]));
+    expect(pendingReads).toHaveLength(1);
+
+    // Файл ещё читается, а пользователь уже удалил колоду.
+    await user.click(screen.getByRole('button', { name: 'удалить «Юнит 1»' }));
+    await user.click(screen.getByRole('button', { name: 'Удалить «Юнит 1»' }));
+    expect(screen.queryByText('Юнит 1')).not.toBeInTheDocument();
+
+    await act(async () => {
+      await pendingReads[0]?.finish();
+    });
+
+    expect(screen.getByText('Импорт')).toBeInTheDocument();
+    expect(screen.queryByText('Юнит 1')).not.toBeInTheDocument();
+    expect(screen.getByText('Юнит 2')).toBeInTheDocument();
   });
 
   it('нечитаемый файл отклоняется с сообщением, библиотека не меняется', async () => {

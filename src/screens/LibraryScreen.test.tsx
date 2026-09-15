@@ -5,6 +5,8 @@ import { renderWithProvider } from '@/test/render';
 import { initialState } from '@/state/appReducer';
 import type { AppState } from '@/state/appReducer';
 import { createDeck } from '@/core/library';
+import type { Deck } from '@/core/library';
+import { exportLibraryJson } from '@/core/transfer';
 import type { Card } from '@/core/deck';
 
 const AT = new Date('2026-09-14T10:00:00Z');
@@ -25,6 +27,16 @@ function withDecks(): AppState {
   const first = createDeck('Юнит 1', cards, AT);
   const second = createDeck('Юнит 2', cards, LATER);
   return { ...initialState, hydrated: true, decks: [first, second], activeDeckId: null, screen: 'library' };
+}
+
+/** Файл в формате, который отдаёт сама выгрузка библиотеки, — так тест не
+ *  разойдётся с реальным форматом при его изменении. */
+function libraryFile(decks: Deck[]): File {
+  return new File([exportLibraryJson(decks)], 'library.json', { type: 'application/json' });
+}
+
+function fileInput(container: HTMLElement): HTMLInputElement {
+  return container.querySelector('input[type="file"]') as HTMLInputElement;
 }
 
 describe('LibraryScreen', () => {
@@ -70,5 +82,60 @@ describe('LibraryScreen', () => {
   it('пустая библиотека не предлагает сохранение', () => {
     renderWithProvider(<LibraryScreen />, { ...initialState, hydrated: true, screen: 'library' });
     expect(screen.queryByRole('button', { name: 'Сохранить в файл' })).not.toBeInTheDocument();
+  });
+
+  it('загрузка файла добавляет колоды к уже имеющимся', async () => {
+    const user = userEvent.setup();
+    const { container } = renderWithProvider(<LibraryScreen />, withDecks());
+
+    const incoming = createDeck('Импорт', cards, AT);
+    await user.upload(fileInput(container), libraryFile([incoming]));
+
+    await screen.findByText('Импорт');
+    expect(screen.getByText('Юнит 1')).toBeInTheDocument();
+    expect(screen.getByText('Юнит 2')).toBeInTheDocument();
+  });
+
+  it('повторная загрузка того же файла даёт второй комплект колод', async () => {
+    const user = userEvent.setup();
+    const { container } = renderWithProvider(<LibraryScreen />, withDecks());
+    const file = libraryFile([createDeck('Импорт', cards, AT)]);
+
+    await user.upload(fileInput(container), file);
+    await screen.findByText('Импорт');
+
+    await user.upload(fileInput(container), file);
+    await screen.findByText('Импорт (2)');
+
+    expect(screen.getByText('Импорт')).toBeInTheDocument();
+    expect(screen.getByText('Импорт (2)')).toBeInTheDocument();
+  });
+
+  it('нечитаемый файл отклоняется с сообщением, библиотека не меняется', async () => {
+    const user = userEvent.setup();
+    const { container } = renderWithProvider(<LibraryScreen />, withDecks());
+    const broken = new File(['{не json'], 'library.json', { type: 'application/json' });
+
+    await user.upload(fileInput(container), broken);
+
+    await screen.findByText('Файл не похож на сохранённую библиотеку');
+    expect(screen.getAllByRole('button', { name: /^Юнит/ })).toHaveLength(2);
+    expect(screen.getByText('Юнит 1')).toBeInTheDocument();
+    expect(screen.getByText('Юнит 2')).toBeInTheDocument();
+  });
+
+  it('успешная загрузка убирает сообщение об ошибке прошлой попытки', async () => {
+    const user = userEvent.setup();
+    const { container } = renderWithProvider(<LibraryScreen />, withDecks());
+    const broken = new File(['{не json'], 'library.json', { type: 'application/json' });
+
+    await user.upload(fileInput(container), broken);
+    await screen.findByText('Файл не похож на сохранённую библиотеку');
+
+    const good = libraryFile([createDeck('Импорт', cards, AT)]);
+    await user.upload(fileInput(container), good);
+    await screen.findByText('Импорт');
+
+    expect(screen.queryByText('Файл не похож на сохранённую библиотеку')).not.toBeInTheDocument();
   });
 });

@@ -174,13 +174,22 @@ export default function TrainingScreen() {
         </button>
       </div>
 
-      <button
-        type="button"
-        className="link-button"
-        onClick={() => dispatch({ type: 'go-to-import' })}
-      >
-        Загрузить новую таблицу
-      </button>
+      <div className="mode__links">
+        <button
+          type="button"
+          className="link-button"
+          onClick={() => dispatch({ type: 'go-to-library' })}
+        >
+          В библиотеку
+        </button>
+        <button
+          type="button"
+          className="link-button"
+          onClick={() => dispatch({ type: 'go-to-import' })}
+        >
+          Загрузить новую таблицу
+        </button>
+      </div>
     </section>
   );
 }

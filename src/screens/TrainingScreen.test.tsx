@@ -4,10 +4,11 @@ import TrainingScreen, { EXIT_DURATION } from '@/screens/TrainingScreen';
 import { renderWithProvider } from '@/test/render';
 import { initialState } from '@/state/appReducer';
 import type { AppState } from '@/state/appReducer';
+import { useAppState, useActiveDeck } from '@/state/AppContext';
 import { createDeck } from '@/core/library';
 import type { Deck } from '@/core/library';
 import type { Card } from '@/core/deck';
-import { createSession } from '@/core/session';
+import { createSession, currentCardId } from '@/core/session';
 
 const AT = new Date('2026-09-14T10:00:00Z');
 
@@ -36,6 +37,24 @@ function swipeWithTimers(key: string) {
   act(() => {
     vi.advanceTimersByTime(EXIT_DURATION + 10);
   });
+}
+
+/** Показывает TrainingScreen, пока экран — «training», и рядом — текущий
+ *  экран и id карточки сессии. Так «В библиотеку» проверяется не только по
+ *  тому, что тренировка исчезла с экрана, но и по тому, что прогресс сессии
+ *  активной колоды дожил до этого момента: go-to-mode тоже увёл бы с экрана
+ *  тренировки, но обнулил бы сессию. */
+function TrainingWithProbe() {
+  const { screen: currentScreen } = useAppState();
+  const deck = useActiveDeck();
+  const cardId = deck?.session === null || deck?.session === undefined ? null : currentCardId(deck.session);
+  return (
+    <>
+      {currentScreen === 'training' && <TrainingScreen />}
+      <p data-testid="screen">{currentScreen}</p>
+      <p data-testid="card-id">{cardId ?? 'none'}</p>
+    </>
+  );
 }
 
 describe('TrainingScreen', () => {
@@ -121,6 +140,22 @@ describe('TrainingScreen', () => {
       screen.queryByText('Выйти в меню? Прогресс тренировки будет потерян.'),
     ).not.toBeInTheDocument();
     expect(screen.getByText('你好')).toBeInTheDocument();
+  });
+
+  it('«В библиотеку» уводит с экрана тренировки, но сохраняет прогресс сессии', async () => {
+    const user = userEvent.setup();
+    renderWithProvider(<TrainingWithProbe />, trainingState());
+
+    // Продвигаем сессию, чтобы было что терять.
+    await user.click(screen.getByRole('button', { name: 'Знаю' }));
+    await screen.findByText('谢谢');
+    expect(screen.getByTestId('card-id')).toHaveTextContent('c2');
+
+    await user.click(screen.getByRole('button', { name: 'В библиотеку' }));
+
+    expect(screen.getByTestId('screen')).toHaveTextContent('library');
+    // Главное: прогресс не обнулился, как это сделал бы go-to-mode.
+    expect(screen.getByTestId('card-id')).toHaveTextContent('c2');
   });
 
   it('во время подтверждения свайпы не работают', () => {

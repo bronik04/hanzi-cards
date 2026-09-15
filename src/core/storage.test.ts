@@ -280,6 +280,71 @@ describe('parseDeckList', () => {
   });
 });
 
+describe('нечисловые числа', () => {
+  /** Подстановка, которую JSON.stringify не умеет записать сам. */
+  const INFINITY = '@@бесконечность@@';
+  const withInfinity = (value: unknown) =>
+    JSON.stringify(value).replace(`"${INFINITY}"`, '1e999');
+
+  it('в файле 1e999 разбирается как Infinity', () => {
+    expect(JSON.parse('1e999')).toBe(Infinity);
+  });
+
+  // Infinity проходил проверку типа, а обратно записывался как null: колода
+  // сохранялась испорченной и на следующем чтении отвергалась целиком.
+  it('parseDeckList отвергает бесконечный счётчик', () => {
+    const raw = withInfinity({
+      version: STORAGE_VERSION,
+      decks: [{ ...deck, stats: { known: INFINITY, unknown: 0 } }],
+    });
+    expect(parseDeckList(raw)).toBeNull();
+  });
+
+  it('deserialize отвергает бесконечный счётчик', () => {
+    const raw = withInfinity({
+      ...valid,
+      decks: [{ ...deck, stats: { known: 0, unknown: INFINITY } }],
+    });
+    expect(deserialize(raw)).toBeNull();
+  });
+
+  it('parseDeckList отвергает бесконечный номер круга', () => {
+    const raw = withInfinity({
+      version: STORAGE_VERSION,
+      decks: [{ ...deck, session: { ...deck.session, round: INFINITY } }],
+    });
+    expect(parseDeckList(raw)).toBeNull();
+  });
+
+  it('parseDeckList отвергает бесконечный номер блока колец', () => {
+    const raw = withInfinity({
+      version: STORAGE_VERSION,
+      decks: [
+        {
+          ...deck,
+          session: {
+            mode: 'ring',
+            blocks: [['c1']],
+            blockIndex: INFINITY,
+            queue: ['c1'],
+            finished: false,
+          },
+        },
+      ],
+    });
+    expect(parseDeckList(raw)).toBeNull();
+  });
+
+  // Счётчики считают штуки: половины круга и половины блока не бывает.
+  it('parseDeckList отвергает дробный номер круга', () => {
+    const raw = JSON.stringify({
+      version: STORAGE_VERSION,
+      decks: [{ ...deck, session: { ...deck.session, round: 1.5 } }],
+    });
+    expect(parseDeckList(raw)).toBeNull();
+  });
+});
+
 describe('loadState: перенос', () => {
   it('читает v2, если v3 ещё нет', () => {
     const storage = memoryStorage({

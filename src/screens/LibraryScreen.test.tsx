@@ -7,6 +7,7 @@ import type { AppState } from '@/state/appReducer';
 import { createDeck } from '@/core/library';
 import type { Deck } from '@/core/library';
 import { exportLibraryJson } from '@/core/transfer';
+import { STORAGE_VERSION } from '@/core/storage';
 import type { Card } from '@/core/deck';
 
 const AT = new Date('2026-09-14T10:00:00Z');
@@ -170,6 +171,25 @@ describe('LibraryScreen', () => {
     expect(screen.getAllByRole('button', { name: /^Юнит/ })).toHaveLength(2);
     expect(screen.getByText('Юнит 1')).toBeInTheDocument();
     expect(screen.getByText('Юнит 2')).toBeInTheDocument();
+  });
+
+  // 1e999 разбирается как Infinity, а записывается обратно как null: приняв
+  // такой файл, приложение сохранило бы библиотеку, которую само же не прочтёт.
+  it('файл с бесконечным счётчиком отклоняется, а не попадает в библиотеку', async () => {
+    const user = userEvent.setup();
+    const { container } = renderWithProvider(<LibraryScreen />, withDecks());
+    const raw = JSON.stringify({
+      version: STORAGE_VERSION,
+      decks: [{ ...createDeck('Импорт', cards, AT), stats: { known: '@@', unknown: 0 } }],
+    }).replace('"@@"', '1e999');
+
+    await user.upload(
+      fileInput(container),
+      new File([raw], 'library.json', { type: 'application/json' }),
+    );
+
+    await screen.findByText('Файл не похож на сохранённую библиотеку');
+    expect(screen.queryByText('Импорт')).not.toBeInTheDocument();
   });
 
   it('успешная загрузка убирает сообщение об ошибке прошлой попытки', async () => {

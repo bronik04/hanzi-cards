@@ -121,9 +121,12 @@ function isCard(value: unknown): value is Card {
 function isSession(value: unknown): value is Session {
   if (!isRecord(value) || typeof value.finished !== 'boolean') return false;
 
+  // Номера считают штуки, поэтому Number.isInteger, а не typeof: JSON.parse
+  // отдаёт 1e999 как Infinity, а JSON.stringify пишет его обратно как null —
+  // такое состояние сохраняется и на следующем чтении отвергается целиком.
   if (value.mode === 'simple') {
     return (
-      typeof value.round === 'number' &&
+      Number.isInteger(value.round) &&
       isStringArray(value.queue) &&
       isStringArray(value.nextRound) &&
       typeof value.perfectRound === 'boolean' &&
@@ -132,7 +135,7 @@ function isSession(value: unknown): value is Session {
   }
   if (value.mode === 'ring') {
     return (
-      typeof value.blockIndex === 'number' &&
+      Number.isInteger(value.blockIndex) &&
       Array.isArray(value.blocks) &&
       value.blocks.every(isStringArray) &&
       isStringArray(value.queue)
@@ -142,7 +145,9 @@ function isSession(value: unknown): value is Session {
 }
 
 function isStats(value: unknown): value is Stats {
-  return isRecord(value) && typeof value.known === 'number' && typeof value.unknown === 'number';
+  // Number.isFinite отсекает Infinity и NaN: они проходят typeof 'number',
+  // но переживают JSON-цикл как null и рушат следующее чтение.
+  return isRecord(value) && Number.isFinite(value.known) && Number.isFinite(value.unknown);
 }
 
 function isMode(value: unknown): value is SessionMode {

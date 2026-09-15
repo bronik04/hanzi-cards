@@ -14,5 +14,8 @@ export function downloadText(fileName: string, text: string, mime: string): void
   link.remove();
 
   // Без отзыва ссылка держит содержимое файла в памяти до перезагрузки вкладки.
-  URL.revokeObjectURL(url);
+  // Отзыв — не сразу: Chromium начинает скачивание синхронно с click() и
+  // прощает немедленный отзыв, но Firefox и Safari в этот момент его отменяли.
+  // Таймер откладывает отзыв до следующего тика, когда браузер уже забрал файл.
+  window.setTimeout(() => URL.revokeObjectURL(url), 0);
 }

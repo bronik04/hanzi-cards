@@ -83,6 +83,18 @@ describe('операции над списком', () => {
     byRecent(input);
     expect(input.map((d) => d.name)).toEqual(['A', 'B']);
   });
+
+  // ISO-строки уже сравниваются верно через < />: localeCompare тут лишний
+  // и вдобавок зависит от локали окружения, чего сортировка избегает нарочно.
+  it('byRecent сравнивает даты как обычные строки, а не через локаль', () => {
+    const spy = vi.spyOn(String.prototype, 'localeCompare');
+    try {
+      byRecent([a, b]);
+      expect(spy).not.toHaveBeenCalled();
+    } finally {
+      spy.mockRestore();
+    }
+  });
 });
 
 describe('uniqueName', () => {
@@ -110,5 +122,24 @@ describe('suggestedName', () => {
   it('работает в январе и декабре', () => {
     expect(suggestedName(new Date('2026-01-01T00:00:00Z'))).toBe('Колода от 1 января 2026');
     expect(suggestedName(new Date('2026-12-31T00:00:00Z'))).toBe('Колода от 31 декабря 2026');
+  });
+
+  // TZ фиксирован явно на время теста: иначе результат зависел бы от часового
+  // пояса машины, на которой запущены тесты, а тест обязан быть детерминированным.
+  describe('часовой пояс', () => {
+    const ORIGINAL_TZ = process.env.TZ;
+
+    beforeEach(() => {
+      process.env.TZ = 'Europe/Moscow';
+    });
+
+    afterEach(() => {
+      process.env.TZ = ORIGINAL_TZ;
+    });
+
+    it('берёт локальную дату, а не UTC, когда они расходятся', () => {
+      // 23:30 UTC — это уже 02:30 следующего дня по Москве (UTC+3).
+      expect(suggestedName(new Date('2026-09-14T23:30:00Z'))).toBe('Колода от 15 сентября 2026');
+    });
   });
 });

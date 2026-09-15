@@ -158,6 +158,36 @@ describe('TrainingScreen', () => {
     expect(screen.getByTestId('card-id')).toHaveTextContent('c2');
   });
 
+  // Таймер dispatch({type:'swiped'}) стоит EXIT_DURATION мс: клик по выходу
+  // раньше, чем он отработает, уводил с экрана и снимался эффектом очистки,
+  // так и не дождавшись dispatch — только что сделанный свайп пропадал молча.
+  it('«В библиотеку» и «Загрузить новую таблицу» недоступны, пока карточка уезжает: свайп не теряется', async () => {
+    const user = userEvent.setup();
+    renderWithProvider(<TrainingWithProbe />, trainingState());
+
+    await user.click(screen.getByRole('button', { name: 'Знаю' }));
+
+    // Карточка ещё уезжает: выходы недоступны, а не просто отложены.
+    const exitButton = screen.getByRole('button', { name: 'В библиотеку' });
+    const importButton = screen.getByRole('button', { name: 'Загрузить новую таблицу' });
+    expect(exitButton).toBeDisabled();
+    expect(importButton).toBeDisabled();
+
+    // Клик по недоступной кнопке ничего не делает — свайп ещё не потерян.
+    await user.click(exitButton);
+    expect(screen.getByTestId('screen')).toHaveTextContent('training');
+
+    await screen.findByText('谢谢');
+    expect(screen.getByTestId('count-known')).toHaveTextContent('1');
+    expect(exitButton).not.toBeDisabled();
+    expect(importButton).not.toBeDisabled();
+
+    await user.click(exitButton);
+    expect(screen.getByTestId('screen')).toHaveTextContent('library');
+    // Свайп дожил до выхода: счётчик и прогресс сессии не потерялись.
+    expect(screen.getByTestId('card-id')).toHaveTextContent('c2');
+  });
+
   it('во время подтверждения свайпы не работают', () => {
     renderWithProvider(<TrainingScreen />, trainingState());
     fireEvent.keyDown(window, { key: 'Escape' });

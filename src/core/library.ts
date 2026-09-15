@@ -61,7 +61,13 @@ export function touchDeck(decks: readonly Deck[], id: string, now: Date): Deck[]
 
 /** Копия списка, недавно открытые первыми. Исходный список не меняется. */
 export function byRecent(decks: readonly Deck[]): Deck[] {
-  return [...decks].sort((a, b) => b.lastOpenedAt.localeCompare(a.lastOpenedAt));
+  // Обычное сравнение строк, не localeCompare: у ISO-8601 порядок символов уже
+  // совпадает с порядком дат, а localeCompare вдобавок зависит от локали
+  // окружения — здесь это лишняя и нежелательная зависимость.
+  return [...decks].sort((a, b) => {
+    if (a.lastOpenedAt === b.lastOpenedAt) return 0;
+    return a.lastOpenedAt > b.lastOpenedAt ? -1 : 1;
+  });
 }
 
 /** «Юнит 1» при занятом имени превращается в «Юнит 1 (2)», затем «(3)» и дальше. */
@@ -75,8 +81,10 @@ export function uniqueName(decks: readonly Deck[], name: string): string {
 }
 
 /** Имя-подсказка для новой колоды. Месяцы списком, а не через Intl: так вывод
- *  не зависит от локали окружения и от версии данных ICU. */
+ *  не зависит от локали окружения и от версии данных ICU. Число, месяц и год —
+ *  локальные, а не UTC: иначе после 21 часа по Москве подсказка называла бы
+ *  вчерашний день. */
 export function suggestedName(now: Date): string {
-  const month = MONTHS[now.getUTCMonth()] ?? '';
-  return `Колода от ${now.getUTCDate()} ${month} ${now.getUTCFullYear()}`;
+  const month = MONTHS[now.getMonth()] ?? '';
+  return `Колода от ${now.getDate()} ${month} ${now.getFullYear()}`;
 }

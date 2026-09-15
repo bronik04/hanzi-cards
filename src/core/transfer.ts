@@ -20,8 +20,32 @@ export function parseLibraryJson(raw: string): ImportResult {
   // mergeImportedDecks, оставляя колоду. Проверь их здесь, файл с одной
   // битой сессией был бы отвергнут целиком, чего спека не хочет.
   const decks = parseDeckList(raw);
-  if (decks === null) return { ok: false, error: 'Файл не похож на сохранённую библиотеку' };
+  if (decks === null) {
+    const otherVersion = mismatchedVersion(raw);
+    // Библиотека другой версии — не то же самое, что «не библиотека вовсе»:
+    // когда появится v4, это сообщение не должно отправлять искать поломку не там.
+    if (otherVersion !== null) {
+      return {
+        ok: false,
+        error: `Файл сохранён другой версией библиотеки (${otherVersion} вместо ${STORAGE_VERSION})`,
+      };
+    }
+    return { ok: false, error: 'Файл не похож на сохранённую библиотеку' };
+  }
   return { ok: true, decks };
+}
+
+/** Номер версии из файла, если это вообще JSON-объект и версия — не текущая. */
+function mismatchedVersion(raw: string): number | null {
+  let parsed: unknown;
+  try {
+    parsed = JSON.parse(raw);
+  } catch {
+    return null;
+  }
+  if (typeof parsed !== 'object' || parsed === null) return null;
+  const version = (parsed as { version?: unknown }).version;
+  return typeof version === 'number' && version !== STORAGE_VERSION ? version : null;
 }
 
 /**
@@ -64,9 +88,13 @@ function flatten(value: string): string {
   return value.replace(/[\t\r\n]+/g, ' ');
 }
 
+// Локальная дата, а не UTC (как даёт toISOString): иначе после 21 часа по
+// Москве имя файла называло бы вчерашний день.
 export function libraryFileName(now: Date): string {
-  const date = now.toISOString().slice(0, 10);
-  return `hanzi-cards-${date}.json`;
+  const year = now.getFullYear();
+  const month = String(now.getMonth() + 1).padStart(2, '0');
+  const day = String(now.getDate()).padStart(2, '0');
+  return `hanzi-cards-${year}-${month}-${day}.json`;
 }
 
 export function deckFileName(deck: Deck): string {

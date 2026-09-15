@@ -20,7 +20,11 @@ export default function ImportScreen() {
   const [text, setText] = useState('');
   const [columnMode, setColumnMode] = useState<ColumnMode>('auto');
   const [fileError, setFileError] = useState('');
-  const [name, setName] = useState(() => suggestedName(new Date()));
+  // Подсказка — то, что подставляется, если поле очистить: изначально дата,
+  // а после выбора файла — его имя. Хранится отдельно от name, иначе очистка
+  // поля забывала бы про файл и откатывалась на свежепосчитанную дату.
+  const [hint, setHint] = useState(() => suggestedName(new Date()));
+  const [name, setName] = useState(hint);
   const [nameTouched, setNameTouched] = useState(false);
   const fileInput = useRef<HTMLInputElement>(null);
 
@@ -39,6 +43,7 @@ export default function ImportScreen() {
       // Файл вроде «.tsv» после отсечения расширения не оставляет имени —
       // тогда подсказку не трогаем, иначе поле молча опустеет без объяснений.
       const stripped = file.name.replace(/\.[^.]+$/, '');
+      if (stripped !== '') setHint(stripped);
       if (!nameTouched && stripped !== '') setName(stripped);
     };
     // Молча очищать поле нельзя: со стороны это выглядит так, будто
@@ -134,7 +139,7 @@ export default function ImportScreen() {
         onClick={() =>
           dispatch({
             type: 'deck-created',
-            name: name.trim() === '' ? suggestedName(new Date()) : name.trim(),
+            name: name.trim() === '' ? hint : name.trim(),
             cards: assignIds(result.cards),
             now: new Date(),
           })

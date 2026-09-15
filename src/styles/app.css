@@ -38,6 +38,11 @@
   cursor: pointer;
 }
 
+.link-button:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
 .card {
   width: var(--card-width);
   height: var(--card-height);

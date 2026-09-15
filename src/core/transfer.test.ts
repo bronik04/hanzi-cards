@@ -8,6 +8,7 @@ import {
 } from '@/core/transfer';
 import { createDeck } from '@/core/library';
 import type { Deck } from '@/core/library';
+import { STORAGE_VERSION } from '@/core/storage';
 import { parseTable } from '@/core/parse';
 import type { Card } from '@/core/deck';
 
@@ -43,6 +44,24 @@ describe('exportLibraryJson и parseLibraryJson', () => {
   it('чужая структура даёт ошибку', () => {
     const result = parseLibraryJson(JSON.stringify({ version: 99, decks: [] }));
     expect(result.ok).toBe(false);
+  });
+
+  // Библиотека другой версии — не то же самое, что не библиотека вовсе:
+  // Этап 2 когда-нибудь начнёт писать v4, и сообщение должно указывать на
+  // настоящую причину, а не отправлять искать поломку не там.
+  it('файл другой версии библиотеки получает отдельное сообщение', () => {
+    const result = parseLibraryJson(JSON.stringify({ version: 99, decks: [] }));
+    expect(result.ok).toBe(false);
+    if (!result.ok) {
+      expect(result.error).toBe(`Файл сохранён другой версией библиотеки (99 вместо ${STORAGE_VERSION})`);
+    }
+  });
+
+  it('сообщение о версии отличается от сообщения «не похож на библиотеку»', () => {
+    const notLibrary = parseLibraryJson('{не json');
+    const wrongVersion = parseLibraryJson(JSON.stringify({ version: 99, decks: [] }));
+    if (notLibrary.ok || wrongVersion.ok) throw new Error('оба разбора должны были провалиться');
+    expect(notLibrary.error).not.toBe(wrongVersion.error);
   });
 
   // Спека требует, чтобы файл с битой сессией загружался, теряя только сессию.
@@ -145,6 +164,25 @@ describe('exportDeckTable', () => {
 describe('имена файлов', () => {
   it('библиотека называется по дате', () => {
     expect(libraryFileName(AT)).toBe('hanzi-cards-2026-09-14.json');
+  });
+
+  // TZ фиксирован на время теста, чтобы результат не зависел от часового
+  // пояса машины, где запущены тесты.
+  describe('часовой пояс', () => {
+    const ORIGINAL_TZ = process.env.TZ;
+
+    beforeEach(() => {
+      process.env.TZ = 'Europe/Moscow';
+    });
+
+    afterEach(() => {
+      process.env.TZ = ORIGINAL_TZ;
+    });
+
+    it('берёт локальную дату, а не UTC, когда они расходятся', () => {
+      // 23:30 UTC — это уже 02:30 следующего дня по Москве (UTC+3).
+      expect(libraryFileName(new Date('2026-09-14T23:30:00Z'))).toBe('hanzi-cards-2026-09-15.json');
+    });
   });
 
   it('колода называется своим именем', () => {

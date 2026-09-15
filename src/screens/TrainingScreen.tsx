@@ -175,9 +175,13 @@ export default function TrainingScreen() {
       </div>
 
       <div className="mode__links">
+        {/* Отключены, пока карточка уезжает: обе ссылки уводят с экрана, не
+            дожидаясь отложенного dispatch({type:'swiped'}), и эффект очистки
+            снимает его таймер при размонтировании — свайп терялся молча. */}
         <button
           type="button"
           className="link-button"
+          disabled={exiting !== null}
           onClick={() => dispatch({ type: 'go-to-library' })}
         >
           В библиотеку
@@ -185,6 +189,7 @@ export default function TrainingScreen() {
         <button
           type="button"
           className="link-button"
+          disabled={exiting !== null}
           onClick={() => dispatch({ type: 'go-to-import' })}
         >
           Загрузить новую таблицу

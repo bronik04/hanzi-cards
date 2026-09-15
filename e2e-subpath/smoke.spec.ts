@@ -21,7 +21,7 @@ test('приложение под подпутём грузится без от�
 
   // Ждём отрисованный экран, а не событие load: иначе проверка сойдётся
   // раньше, чем приедут ассеты, и пропустит их 404.
-  await expect(page.getByRole('heading', { name: 'Вставьте таблицу со словами' })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Новая колода' })).toBeVisible();
   expect(failed).toEqual([]);
 });
 
@@ -76,7 +76,7 @@ test('приложение под подпутём работает без се�
   await context.setOffline(true);
   await page.reload();
 
-  await expect(page.getByRole('heading', { name: 'Вставьте таблицу со словами' })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Новая колода' })).toBeVisible();
   await page.getByLabel('Таблица со словами').fill(SHORT_TABLE);
   await expect(page.getByText('Добавлено 2 карточки')).toBeVisible();
 });

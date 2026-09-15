@@ -4,15 +4,20 @@ import ModeScreen from '@/screens/ModeScreen';
 import { renderWithProvider } from '@/test/render';
 import { initialState } from '@/state/appReducer';
 import type { AppState } from '@/state/appReducer';
+import { createDeck } from '@/core/library';
+import type { Deck } from '@/core/library';
 import type { Card } from '@/core/deck';
+
+const AT = new Date('2026-09-14T10:00:00Z');
 
 const cards: Card[] = [
   { id: 'c1', hanzi: '你好', pinyin: 'nǐ hǎo', translation: 'привет' },
   { id: 'c2', hanzi: '谢谢', pinyin: 'xièxie', translation: 'спасибо' },
 ];
 
-function stateWith(overrides: Partial<AppState> = {}): AppState {
-  return { ...initialState, cards, hydrated: true, screen: 'mode', ...overrides };
+function stateWith(overrides: Partial<Deck> = {}): AppState {
+  const deck = { ...createDeck('Тестовая колода', cards, AT), ...overrides };
+  return { ...initialState, hydrated: true, decks: [deck], activeDeckId: deck.id, screen: 'mode' };
 }
 
 describe('ModeScreen', () => {
@@ -56,5 +61,12 @@ describe('ModeScreen', () => {
   it('даёт ссылку на загрузку новой таблицы', () => {
     renderWithProvider(<ModeScreen />, stateWith());
     expect(screen.getByRole('button', { name: 'Загрузить новую таблицу' })).toBeInTheDocument();
+  });
+
+  // Без этой ссылки из выбора режима в библиотеку не попасть иначе как
+  // через импорт с последующей отменой.
+  it('даёт ссылку в библиотеку', () => {
+    renderWithProvider(<ModeScreen />, stateWith());
+    expect(screen.getByRole('button', { name: 'В библиотеку' })).toBeInTheDocument();
   });
 });

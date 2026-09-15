@@ -1,7 +1,8 @@
 import { createContext, useContext, useReducer } from 'react';
 import type { Dispatch, ReactNode } from 'react';
-import { appReducer, initialState } from '@/state/appReducer';
+import { activeDeck, appReducer, initialState } from '@/state/appReducer';
 import type { AppAction, AppState } from '@/state/appReducer';
+import type { Deck } from '@/core/library';
 
 const StateContext = createContext<AppState | null>(null);
 const DispatchContext = createContext<Dispatch<AppAction> | null>(null);
@@ -26,4 +27,8 @@ export function useAppDispatch(): Dispatch<AppAction> {
   const dispatch = useContext(DispatchContext);
   if (dispatch === null) throw new Error('useAppDispatch must be used inside AppProvider');
   return dispatch;
+}
+
+export function useActiveDeck(): Deck | null {
+  return activeDeck(useAppState());
 }

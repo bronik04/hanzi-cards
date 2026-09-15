@@ -1,10 +1,11 @@
 import { useMemo, useRef, useState } from 'react';
 import type { ChangeEvent } from 'react';
 import { assignIds } from '@/core/deck';
+import { suggestedName } from '@/core/library';
 import { cardsCount, plural } from '@/core/plural';
 import { parseTable } from '@/core/parse';
 import type { ColumnMode } from '@/core/parse';
-import { useAppDispatch, useAppState } from '@/state/AppContext';
+import { useAppDispatch } from '@/state/AppContext';
 
 const PREVIEW_LIMIT = 5;
 
@@ -15,11 +16,16 @@ const COLUMN_OPTIONS: ReadonlyArray<{ value: ColumnMode; label: string }> = [
 ];
 
 export default function ImportScreen() {
-  const { cards, session } = useAppState();
   const dispatch = useAppDispatch();
   const [text, setText] = useState('');
   const [columnMode, setColumnMode] = useState<ColumnMode>('auto');
   const [fileError, setFileError] = useState('');
+  // Подсказка — то, что подставляется, если поле очистить: изначально дата,
+  // а после выбора файла — его имя. Хранится отдельно от name, иначе очистка
+  // поля забывала бы про файл и откатывалась на свежепосчитанную дату.
+  const [hint, setHint] = useState(() => suggestedName(new Date()));
+  const [name, setName] = useState(hint);
+  const [nameTouched, setNameTouched] = useState(false);
   const fileInput = useRef<HTMLInputElement>(null);
 
   const result = useMemo(() => parseTable(text, columnMode), [text, columnMode]);
@@ -33,6 +39,12 @@ export default function ImportScreen() {
     reader.onload = () => {
       setFileError('');
       setText(String(reader.result ?? ''));
+      // Имя файла подсказывает имя колоды, но только пока пользователь не ввёл своё.
+      // Файл вроде «.tsv» после отсечения расширения не оставляет имени —
+      // тогда подсказку не трогаем, иначе поле молча опустеет без объяснений.
+      const stripped = file.name.replace(/\.[^.]+$/, '');
+      if (stripped !== '') setHint(stripped);
+      if (!nameTouched && stripped !== '') setName(stripped);
     };
     // Молча очищать поле нельзя: со стороны это выглядит так, будто
     // приложение съело уже набранную таблицу.
@@ -43,11 +55,18 @@ export default function ImportScreen() {
 
   return (
     <section className="screen">
-      <h1>Вставьте таблицу со словами</h1>
+      <h1>Новая колода</h1>
 
-      {session !== null && !session.finished && (
-        <p className="import__notice">Идёт тренировка — новая колода её заменит</p>
-      )}
+      <label className="import__name">
+        <span>Название колоды</span>
+        <input
+          value={name}
+          onChange={(event) => {
+            setNameTouched(true);
+            setName(event.target.value);
+          }}
+        />
+      </label>
 
       <textarea
         className="import__textarea"
@@ -65,6 +84,7 @@ export default function ImportScreen() {
           ref={fileInput}
           type="file"
           accept=".csv,.tsv,.txt,text/csv,text/plain"
+          aria-label="Файл с таблицей"
           hidden
           onChange={handleFile}
         />
@@ -116,20 +136,28 @@ export default function ImportScreen() {
         type="button"
         className="btn"
         disabled={result.addedCount === 0}
-        onClick={() => dispatch({ type: 'deck-imported', cards: assignIds(result.cards) })}
+        onClick={() =>
+          dispatch({
+            type: 'deck-created',
+            name: name.trim() === '' ? hint : name.trim(),
+            cards: assignIds(result.cards),
+            now: new Date(),
+          })
+        }
       >
         Создать колоду
       </button>
 
-      {cards.length > 0 && (
-        <button
-          type="button"
-          className="link-button"
-          onClick={() => dispatch({ type: 'import-cancelled' })}
-        >
-          Отменить
-        </button>
-      )}
+      {/* Выход не зависит от числа колод: при пустой библиотеке он нужнее
+          всего — «Загрузить из файла» живёт только там, и после чистки
+          браузера это единственный путь к сохранённому файлу. */}
+      <button
+        type="button"
+        className="link-button"
+        onClick={() => dispatch({ type: 'go-to-library' })}
+      >
+        В библиотеку
+      </button>
     </section>
   );
 }

@@ -44,7 +44,7 @@
 
 Тесты лежат рядом с модулем: `src/core/library.test.ts`, `src/screens/LibraryScreen.test.tsx` и так далее. Сквозные — в `e2e/library.spec.ts`.
 
-**Исходник макетов.** Экраны согласованы по файлу `mockups.html` в корне репозитория; он не в гите. CSS оттуда переносится в `src/styles/app.css` в задаче 5, сам файл удаляется в задаче 10.
+**Исходник макетов.** Экраны согласованы по файлу `mockups.html` в корне репозитория; он не в гите. CSS оттуда переносится в `src/styles/app.css` в задаче 5, сам файл удаляется в задаче 9.
 
 ---
 
@@ -807,11 +807,14 @@ Co-Authored-By: Claude Opus 5 <noreply@anthropic.com>"
 
 Модуль готовит и разбирает текст; сохранение файла на диск делает слой представления в задаче 7. `core` не имеет доступа к DOM, и это правило Этапа 0 остаётся в силе.
 
+**Почему проверка файла своя, а не `deserialize`.** Спека требует разного отношения к висячей ссылке сессии: хранилище отвергает состояние целиком, а файл — только сбрасывает сессию, потому что файл приходит от пользователя и терять из-за одной битой сессии всю колоду неправильно. `deserialize` проверку ссылок делает, поэтому через него файл с битой сессией был бы отвергнут целиком и правило спеки стало бы недостижимым: `mergeImportedDecks` до такой колоды просто не дошёл бы. Поэтому проверка формы и проверка ссылок разводятся: `storage.ts` получает `parseDeckList`, который проверяет форму без ссылок, а сброс битой сессии остаётся за `mergeImportedDecks`.
+
 **Files:**
 - Create: `src/core/transfer.ts`, `src/core/transfer.test.ts`
+- Modify: `src/core/storage.ts`, `src/core/storage.test.ts`
 
 **Interfaces:**
-- Consumes: `Deck`, `uniqueName` из `@/core/library`; `newId` из `@/core/id`; `sessionCardIds`, `STORAGE_VERSION`, `deserialize` из `@/core/storage`
+- Consumes: `Deck`, `uniqueName` из `@/core/library`; `newId` из `@/core/id`; `sessionCardIds`, `STORAGE_VERSION`, `parseDeckList` из `@/core/storage`
 - Produces:
   - `exportLibraryJson(decks: readonly Deck[]): string`
   - `type ImportResult = { ok: true; decks: Deck[] } | { ok: false; error: string }`
@@ -820,6 +823,112 @@ Co-Authored-By: Claude Opus 5 <noreply@anthropic.com>"
   - `exportDeckTable(deck: Deck): string`
   - `libraryFileName(now: Date): string`
   - `deckFileName(deck: Deck): string`
+
+- [ ] **Step 0: Разделить в `storage.ts` проверку формы и проверку ссылок**
+
+Сейчас `isDeck` проверяет и форму колоды, и то, что сессия ссылается только на свои карточки. Файлу обмена нужна первая половина без второй. Разделите функцию и добавьте разбор списка колод.
+
+В `src/core/storage.ts` замените `isDeck` на три функции:
+
+```ts
+/** Форма колоды, без проверки ссылок сессии. */
+function isDeckShape(value: unknown): value is Deck {
+  if (
+    !isRecord(value) ||
+    typeof value.id !== 'string' ||
+    typeof value.name !== 'string' ||
+    typeof value.createdAt !== 'string' ||
+    typeof value.lastOpenedAt !== 'string' ||
+    !Array.isArray(value.cards) ||
+    !value.cards.every(isCard) ||
+    typeof value.direction !== 'string' ||
+    !DIRECTIONS.includes(value.direction as Direction) ||
+    !isStats(value.stats) ||
+    !isMode(value.startedMode)
+  ) {
+    return false;
+  }
+  return value.session === null || isSession(value.session);
+}
+
+/** Сессия ссылается только на карточки своей колоды. */
+export function sessionFitsDeck(deck: Deck): boolean {
+  if (deck.session === null) return true;
+  const known = new Set(deck.cards.map((card) => card.id));
+  return sessionCardIds(deck.session).every((id) => known.has(id));
+}
+
+function isDeck(value: unknown): value is Deck {
+  // Сессия, ссылающаяся на отсутствующую карточку, даёт экран тренировки без
+  // карточки и без единой кнопки. В хранилище такое состояние отвергается
+  // целиком; файл обмена мягче — там сбрасывается только сессия.
+  return isDeckShape(value) && sessionFitsDeck(value);
+}
+```
+
+Рядом с `deserialize` добавьте разбор файла обмена:
+
+```ts
+/**
+ * Список колод из файла обмена: форма проверяется, ссылки сессий — нет.
+ * Их чинит `mergeImportedDecks`, сбрасывая только битую сессию.
+ */
+export function parseDeckList(raw: string): Deck[] | null {
+  let parsed: unknown;
+  try {
+    parsed = JSON.parse(raw);
+  } catch {
+    return null;
+  }
+  if (!isRecord(parsed) || parsed.version !== STORAGE_VERSION) return null;
+  if (!Array.isArray(parsed.decks) || !parsed.decks.every(isDeckShape)) return null;
+  return parsed.decks;
+}
+```
+
+Допишите в `src/core/storage.test.ts` блок:
+
+```ts
+describe('parseDeckList', () => {
+  it('возвращает колоды из выгрузки', () => {
+    const raw = JSON.stringify({ version: STORAGE_VERSION, decks: [deck] });
+    expect(parseDeckList(raw)).toEqual([deck]);
+  });
+
+  it('не требует activeDeckId', () => {
+    expect(parseDeckList(JSON.stringify({ version: STORAGE_VERSION, decks: [] }))).toEqual([]);
+  });
+
+  // Ключевое отличие от deserialize: тот же вход тот отвергает целиком.
+  it('пропускает колоду с висячей ссылкой сессии, в отличие от deserialize', () => {
+    const broken = { ...deck, session: { ...deck.session, queue: ['нет такой'] } };
+    const raw = JSON.stringify({ version: STORAGE_VERSION, decks: [broken] });
+    expect(parseDeckList(raw)).toHaveLength(1);
+    expect(deserialize(JSON.stringify({ ...valid, decks: [broken] }))).toBeNull();
+  });
+
+  it('битый JSON и чужую версию отвергает', () => {
+    expect(parseDeckList('{не json')).toBeNull();
+    expect(parseDeckList(JSON.stringify({ version: 99, decks: [] }))).toBeNull();
+  });
+
+  it('отвергает колоду с битой формой', () => {
+    const raw = JSON.stringify({
+      version: STORAGE_VERSION,
+      decks: [{ ...deck, direction: 'hanzi-to-mars' }],
+    });
+    expect(parseDeckList(raw)).toBeNull();
+  });
+});
+```
+
+Добавьте `parseDeckList` в импорты теста. Прогоните:
+
+```bash
+npm run test -- src/core/storage.test.ts && npm run lint
+```
+
+Ожидается: всё зелёное. Существующие тесты `deserialize` не меняются — поведение хранилища прежнее.
 
 - [ ] **Step 1: Написать падающие тесты**
 
@@ -871,6 +980,26 @@ describe('exportLibraryJson и parseLibraryJson', () => {
   it('чужая структура даёт ошибку', () => {
     const result = parseLibraryJson(JSON.stringify({ version: 99, decks: [] }));
     expect(result.ok).toBe(false);
+  });
+
+  // Спека требует, чтобы файл с битой сессией загружался, теряя только сессию.
+  // Проверка целиком: разбор не должен отвергнуть такой файл, иначе до сброса
+  // сессии в mergeImportedDecks дело не дойдёт.
+  it('файл с битой сессией разбирается, и сессия сбрасывается при слиянии', () => {
+    const broken = deck('С битой сессией', {
+      session: {
+        mode: 'simple', round: 1, queue: ['нет такой'], nextRound: [],
+        perfectRound: true, finalRound: false, finished: false,
+      },
+    });
+    const result = parseLibraryJson(exportLibraryJson([broken]));
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+
+    const merged = mergeImportedDecks([], result.decks);
+    expect(merged).toHaveLength(1);
+    expect(merged[0]?.session).toBeNull();
+    expect(merged[0]?.cards).toHaveLength(2);
   });
 });
 
@@ -985,7 +1114,7 @@ npm run test -- src/core/transfer.test.ts
 import { newId } from '@/core/id';
 import { uniqueName } from '@/core/library';
 import type { Deck } from '@/core/library';
-import { STORAGE_VERSION, deserialize, sessionCardIds } from '@/core/storage';
+import { STORAGE_VERSION, parseDeckList, sessionCardIds } from '@/core/storage';
 
 export type ImportResult = { ok: true; decks: Deck[] } | { ok: false; error: string };
 
@@ -999,22 +1128,12 @@ export function exportLibraryJson(decks: readonly Deck[]): string {
 }
 
 export function parseLibraryJson(raw: string): ImportResult {
-  // Проверка та же, что у хранилища: файл должен быть пригоден к загрузке
-  // ровно в той же мере, что и содержимое localStorage.
-  const state = deserialize(withoutActiveDeck(raw));
-  if (state === null) return { ok: false, error: 'Файл не похож на сохранённую библиотеку' };
-  return { ok: true, decks: state.decks };
-}
-
-/** Файл выгрузки не содержит activeDeckId, а проверка хранилища его ожидает. */
-function withoutActiveDeck(raw: string): string {
-  try {
-    const parsed: unknown = JSON.parse(raw);
-    if (typeof parsed !== 'object' || parsed === null) return raw;
-    return JSON.stringify({ ...(parsed as Record<string, unknown>), activeDeckId: null });
-  } catch {
-    return raw;
-  }
+  // Форма проверяется строго, ссылки сессий — нет: битую сессию сбрасывает
+  // mergeImportedDecks, оставляя колоду. Проверь их здесь, файл с одной
+  // битой сессией был бы отвергнут целиком, чего спека не хочет.
+  const decks = parseDeckList(raw);
+  if (decks === null) return { ok: false, error: 'Файл не похож на сохранённую библиотеку' };
+  return { ok: true, decks };
 }
 
 /**
@@ -1073,10 +1192,10 @@ export function deckFileName(deck: Deck): string {
 - [ ] **Step 4: Убедиться, что тесты проходят**
 
 ```bash
-npm run test -- src/core/transfer.test.ts
+npm run test -- src/core/transfer.test.ts src/core/storage.test.ts
 ```
 
-Ожидается: все тесты зелёные.
+Ожидается: все тесты зелёные в обоих файлах.
 
 - [ ] **Step 5: Проверить линтер**
 
@@ -1089,7 +1208,7 @@ npm run lint
 - [ ] **Step 6: Коммит**
 
 ```bash
-git add src/core/transfer.ts src/core/transfer.test.ts
+git add src/core/transfer.ts src/core/transfer.test.ts src/core/storage.ts src/core/storage.test.ts
 git commit -m "feat: build and parse the library and deck exchange files
 
 Co-Authored-By: Claude Opus 5 <noreply@anthropic.com>"
@@ -2786,13 +2905,22 @@ Co-Authored-By: Claude Opus 5 <noreply@anthropic.com>"
 
 **Files:**
 - Create: `e2e/library.spec.ts`
-- Modify: `e2e/fixtures.ts`
+- Modify: `e2e/fixtures.ts`, `e2e/training.spec.ts`, `e2e/offline.spec.ts`, `e2e-subpath/smoke.spec.ts`
 
 **Interfaces:**
 - Consumes: `SHORT_TABLE`, `TABLE` из `./fixtures`
 - Produces: `createDeckThroughUi(page, name, table)` из `./fixtures`
 
-> **Осторожно:** ветка `subpath-e2e` из параллельной задачи тоже правит `e2e/`. При слиянии сверьте `e2e/fixtures.ts` — конфликт ожидается в списке экспортов, а не в логике.
+> **Ветка `subpath-e2e` уже слита в `master`** (коммит 5a6b0dd), и её стенд живёт в
+> отдельной папке `e2e-subpath/` со своим конфигом — конфликта с `e2e/` нет.
+> Зато этот стенд импортирует помощники из `e2e/fixtures.ts` и ходит по тем же
+> экранам, поэтому чинить его надо здесь же: шаг 3 ниже.
+
+> **Про селекторы.** У кнопок строки колоды доступное имя включает имя колоды —
+> `переименовать «Юнит 1»`, `удалить «Юнит 1»`, — чтобы читалка не произносила
+> подряд три одинаковых слова на списке из десяти колод. Поэтому имя колоды
+> в селекторах якорится с начала (`/^Юнит 1/`): без якоря `/Юнит 1/` поймает
+> заодно все три кнопки действий этой же строки, и `toHaveCount(2)` увидит восемь.
 
 - [ ] **Step 1: Добавить помощник в фикстуры**
 
@@ -2835,11 +2963,11 @@ test('две колоды не мешают тренировкам друг др
 
   // Первая колода должна помнить, что тренировка не закончена.
   await page.getByRole('button', { name: 'В библиотеку' }).click();
-  await expect(page.getByRole('button', { name: /Юнит 1/ })).toContainText('тренировка не закончена');
-  await expect(page.getByRole('button', { name: /Юнит 2/ })).not.toContainText('тренировка не закончена');
+  await expect(page.getByRole('button', { name: /^Юнит 1/ })).toContainText('тренировка не закончена');
+  await expect(page.getByRole('button', { name: /^Юнит 2/ })).not.toContainText('тренировка не закончена');
 
   // И действительно продолжает с того же места.
-  await page.getByRole('button', { name: /Юнит 1/ }).click();
+  await page.getByRole('button', { name: /^Юнит 1/ }).click();
   await page.getByRole('button', { name: 'Продолжить' }).click();
   await expect(page.getByTestId('count-known')).toHaveText('1');
 });
@@ -2849,14 +2977,14 @@ test('переименование и удаление колоды', async ({ p
   await createDeckThroughUi(page, 'Юнит 1', SHORT_TABLE);
   await page.getByRole('button', { name: 'В библиотеку' }).click();
 
-  await page.getByRole('button', { name: 'переименовать' }).click();
+  await page.getByRole('button', { name: /^переименовать/ }).click();
   await page.getByLabel('Название колоды').fill('Переименованная');
   await page.getByRole('button', { name: 'Сохранить' }).click();
-  await expect(page.getByRole('button', { name: /Переименованная/ })).toBeVisible();
+  await expect(page.getByRole('button', { name: /^Переименованная/ })).toBeVisible();
 
-  await page.getByRole('button', { name: 'удалить' }).click();
+  await page.getByRole('button', { name: /^удалить/ }).click();
   await expect(page.getByText('Удалить вместе с прогрессом?')).toBeVisible();
-  await page.getByRole('button', { name: 'Удалить' }).click();
+  await page.getByRole('button', { name: /^Удалить/ }).click();
   await expect(page.getByText('Пока ни одной колоды', { exact: false })).toBeVisible();
 });
 
@@ -2877,23 +3005,67 @@ test('библиотека сохраняется в файл и загружа�
   await page.getByRole('button', { name: 'Загрузить из файла' }).click();
   await page.locator('input[type="file"][accept*="json"]').setInputFiles(path as string);
 
-  await expect(page.getByRole('button', { name: /Юнит 1/ })).toHaveCount(2);
-  await expect(page.getByRole('button', { name: /Юнит 1 \(2\)/ })).toBeVisible();
+  await expect(page.getByRole('button', { name: /^Юнит 1/ })).toHaveCount(2);
+  await expect(page.getByRole('button', { name: /^Юнит 1 \(2\)/ })).toBeVisible();
 });
 ```
 
-- [ ] **Step 3: Прогнать сквозные тесты**
+- [ ] **Step 3: Починить существующие сквозные тесты**
 
-```bash
-npm run test:e2e
+До Этапа 1 первым экраном был импорт, и все три существующих файла заходят прямо на него. Теперь первый экран — библиотека, а заголовок импорта стал «Новая колода». Без этой правки задача 8 оставит ветку с красными тестами.
+
+В `e2e/training.spec.ts` и `e2e/offline.spec.ts` после каждого `page.goto('/')` добавьте переход в импорт:
+
+```ts
+await page.getByRole('button', { name: 'Добавить колоду' }).click();
 ```
 
-Ожидается: все тесты зелёные. Если `waitForEvent('download')` истекает по времени, проверьте, что в `playwright.config.ts` не выставлено `acceptDownloads: false` — по умолчанию загрузки разрешены.
+и замените все проверки заголовка импорта:
+
+```ts
+await expect(page.getByRole('heading', { name: 'Вставьте таблицу со словами' })).toBeVisible();
+```
+
+на
+
+```ts
+await expect(page.getByRole('heading', { name: 'Новая колода' })).toBeVisible();
+```
+
+В `e2e-subpath/smoke.spec.ts` первые три теста проверяют только то, что экран вообще отрисовался, — им нужен не импорт, а сам первый экран, и перехода в импорт добавлять не надо.
+
+**Какой это экран — проверьте по приложению, а не по этому абзацу.** Гидратация выбирает экран так: `screen: decks.length === 0 ? 'import' : 'library'` (`src/state/appReducer.ts`). У свежего браузерного контекста колод нет, так что первый экран — импорт, и правильная проверка здесь:
+
+```ts
+await expect(page.getByRole('heading', { name: 'Новая колода' })).toBeVisible();
+```
+
+Библиотеку (`'Мои колоды'`) ждать имеет смысл только там, где колода уже сохранена, — то есть в тесте, который перезагружает страницу после создания колоды.
+
+Четвёртому тесту, «приложение под подпутём работает без сети с первого визита», переход нужен: он заполняет таблицу. После `page.reload()` дождитесь библиотеки, нажмите «Добавить колоду» и дальше по-старому:
+
+```ts
+  await context.setOffline(true);
+  await page.reload();
+
+  await expect(page.getByRole('heading', { name: 'Мои колоды' })).toBeVisible();
+  await page.getByRole('button', { name: 'Добавить колоду' }).click();
+  await page.getByLabel('Таблица со словами').fill(SHORT_TABLE);
+  await expect(page.getByText('Добавлено 2 карточки')).toBeVisible();
+```
+
+- [ ] **Step 3a: Прогнать оба стенда**
+
+```bash
+npm run test:e2e && npm run test:e2e:subpath
+```
+
+Ожидается: все тесты зелёные на обоих стендах. Если `waitForEvent('download')` истекает по времени, проверьте, что в `playwright.config.ts` не выставлено `acceptDownloads: false` — по умолчанию загрузки разрешены.
 
 - [ ] **Step 4: Коммит**
 
 ```bash
-git add e2e/library.spec.ts e2e/fixtures.ts
+git add e2e/ e2e-subpath/
 git commit -m "test: cover the deck library end to end
 
 Co-Authored-By: Claude Opus 5 <noreply@anthropic.com>"

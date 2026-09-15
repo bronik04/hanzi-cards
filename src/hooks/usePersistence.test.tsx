@@ -1,9 +1,10 @@
-import { renderHook } from '@testing-library/react';
+import { act, renderHook } from '@testing-library/react';
 import { useReducer } from 'react';
 import { usePersistence } from '@/hooks/usePersistence';
-import { STORAGE_KEY, STORAGE_VERSION } from '@/core/storage';
+import { LEGACY_STORAGE_KEY, STORAGE_KEY, STORAGE_VERSION } from '@/core/storage';
 import type { StorageLike, StoredState } from '@/core/storage';
 import { appReducer, initialState } from '@/state/appReducer';
+import { createDeck } from '@/core/library';
 
 function memoryStorage(initial: Record<string, string> = {}) {
   const data: Record<string, string> = { ...initial };
@@ -16,12 +17,16 @@ function memoryStorage(initial: Record<string, string> = {}) {
   return { storage, data };
 }
 
+const deck = createDeck(
+  'Юнит 1',
+  [{ id: 'c1', hanzi: '你好', pinyin: 'nǐ hǎo', translation: 'привет' }],
+  new Date('2026-09-14T10:00:00Z'),
+);
+
 const stored: StoredState = {
   version: STORAGE_VERSION,
-  cards: [{ id: 'c1', hanzi: '你好', pinyin: 'nǐ hǎo', translation: 'привет' }],
-  direction: 'hanzi-to-translation',
-  session: null,
-  stats: { known: 0, unknown: 0 },
+  decks: [deck],
+  activeDeckId: deck.id,
 };
 
 function renderWithPersistence(storage: StorageLike | null) {
@@ -36,8 +41,9 @@ describe('usePersistence', () => {
   it('восстанавливает сохранённое состояние при монтировании', () => {
     const { storage } = memoryStorage({ [STORAGE_KEY]: JSON.stringify(stored) });
     const { result } = renderWithPersistence(storage);
-    expect(result.current.cards).toHaveLength(1);
-    expect(result.current.screen).toBe('mode');
+    expect(result.current.decks).toHaveLength(1);
+    expect(result.current.activeDeckId).toBe(deck.id);
+    expect(result.current.screen).toBe('library');
     expect(result.current.hydrated).toBe(true);
   });
 
@@ -45,7 +51,7 @@ describe('usePersistence', () => {
     const { storage, data } = memoryStorage({ [STORAGE_KEY]: JSON.stringify(stored) });
     renderWithPersistence(storage);
     const written = JSON.parse(data[STORAGE_KEY] ?? '{}') as StoredState;
-    expect(written.cards).toHaveLength(1);
+    expect(written.decks).toHaveLength(1);
   });
 
   it('на пустом хранилище поднимает hydrated и остаётся на импорте', () => {
@@ -60,6 +66,72 @@ describe('usePersistence', () => {
     renderWithPersistence(storage);
     expect(data[STORAGE_KEY]).toBeDefined();
     expect(JSON.parse(data[STORAGE_KEY] ?? '{}')).toMatchObject({ version: STORAGE_VERSION });
+  });
+
+  // Нечитаемое значение — единственная копия библиотеки. Пока оно цело, колоду
+  // можно спасти руками; запись пустой библиотекой уничтожает её за один кадр.
+  it('нечитаемый v3 не перезаписывается пустой библиотекой', () => {
+    const broken = '{не json';
+    const { storage, data } = memoryStorage({ [STORAGE_KEY]: broken });
+    const { result } = renderWithPersistence(storage);
+
+    expect(result.current.hydrated).toBe(true);
+    expect(result.current.storageUnreadable).toBe(true);
+    expect(data[STORAGE_KEY]).toBe(broken);
+  });
+
+  it('нечитаемый v3 не подменяется колодой из v2 и не переписывается ею', () => {
+    const broken = '{не json';
+    const legacy = JSON.stringify({
+      version: 2,
+      cards: deck.cards,
+      direction: 'hanzi-to-translation',
+      session: null,
+      stats: { known: 0, unknown: 0 },
+    });
+    const { storage, data } = memoryStorage({
+      [STORAGE_KEY]: broken,
+      [LEGACY_STORAGE_KEY]: legacy,
+    });
+    const { result } = renderWithPersistence(storage);
+
+    expect(result.current.decks).toHaveLength(0);
+    expect(result.current.storageUnreadable).toBe(true);
+    expect(data[STORAGE_KEY]).toBe(broken);
+    expect(data[LEGACY_STORAGE_KEY]).toBe(legacy);
+  });
+
+  // Круглый путь, а не только флаг: предупреждение в App.tsx велит открыть
+  // библиотеку и загрузить файл именно затем, чтобы запись снова заработала.
+  it('после импорта библиотеки поверх нечитаемого значения запись возобновляется', () => {
+    const broken = '{не json';
+    const { storage, data } = memoryStorage({ [STORAGE_KEY]: broken });
+    const { result } = renderHook(() => {
+      const [state, dispatch] = useReducer(appReducer, initialState);
+      usePersistence(state, dispatch, storage);
+      return { state, dispatch };
+    });
+
+    expect(result.current.state.storageUnreadable).toBe(true);
+    expect(data[STORAGE_KEY]).toBe(broken);
+
+    // Пользователь открывает библиотеку и загружает файл — это и есть импорт:
+    // полная годная библиотека, за которую пользователь явно поручился.
+    act(() => {
+      result.current.dispatch({ type: 'decks-imported', decks: [deck] });
+    });
+
+    expect(result.current.state.storageUnreadable).toBe(false);
+    const afterImport = JSON.parse(data[STORAGE_KEY] ?? '{}') as StoredState;
+    expect(afterImport.decks.map((d) => d.id)).toEqual([deck.id]);
+    expect(afterImport.decks[0]?.name).toBe('Юнит 1');
+
+    // Флаг снят не только для этого кадра — следующее изменение тоже пишется.
+    act(() => {
+      result.current.dispatch({ type: 'deck-renamed', id: deck.id, name: 'Юнит 1 (переименована)' });
+    });
+    const afterRename = JSON.parse(data[STORAGE_KEY] ?? '{}') as StoredState;
+    expect(afterRename.decks[0]?.name).toBe('Юнит 1 (переименована)');
   });
 
   it('поднимает storageFailed, если запись отказала', () => {

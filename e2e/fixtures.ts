@@ -20,6 +20,15 @@ export const TABLE = asTable(WORDS);
 /** Две карточки — когда проверяется не логика блоков, а что-то другое. */
 export const SHORT_TABLE = asTable(WORDS.slice(0, 2));
 
+/** Проходит экран импорта целиком: имя, таблица, создание колоды. */
+export async function createDeckThroughUi(page: Page, name: string, table: string) {
+  const nameField = page.getByLabel('Название колоды');
+  await nameField.fill(name);
+  await page.getByLabel('Таблица со словами').fill(table);
+  await page.getByRole('button', { name: 'Создать колоду' }).click();
+  await expect(page.getByRole('heading', { name: /Колода готова/ })).toBeVisible();
+}
+
 export async function serviceWorkerActive(page: Page) {
   await expect
     .poll(

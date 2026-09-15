@@ -4,17 +4,27 @@ import Counters from '@/components/Counters';
 import RingProgress from '@/components/RingProgress';
 import SimpleProgress from '@/components/SimpleProgress';
 import { backFace, frontFace } from '@/core/deck';
+import type { Card as CardType } from '@/core/deck';
+import { NO_STATS } from '@/core/library';
 import { currentCardId, ringProgress, roundProgress, stageLabel } from '@/core/session';
 import type { Session, SwipeDirection } from '@/core/session';
 import { useSwipeGesture } from '@/hooks/useSwipeGesture';
-import { useAppDispatch, useAppState } from '@/state/AppContext';
+import { useActiveDeck, useAppDispatch } from '@/state/AppContext';
+
+/** Пустая колода одним объектом на весь модуль: новый литерал на каждый
+ *  рендер сбрасывал бы useMemo с картой карточек. */
+const NO_CARDS: readonly CardType[] = [];
 
 /** Совпадает с длительностью перехода .card в app.css. */
 export const EXIT_DURATION = 220;
 const BANNER_DURATION = 1800;
 
 export default function TrainingScreen() {
-  const { cards, direction, session, stats } = useAppState();
+  const deck = useActiveDeck();
+  const cards = deck?.cards ?? NO_CARDS;
+  const direction = deck?.direction ?? 'hanzi-to-translation';
+  const session = deck?.session ?? null;
+  const stats = deck?.stats ?? NO_STATS;
   const dispatch = useAppDispatch();
 
   const [flipped, setFlipped] = useState(false);
@@ -164,13 +174,27 @@ export default function TrainingScreen() {
         </button>
       </div>
 
-      <button
-        type="button"
-        className="link-button"
-        onClick={() => dispatch({ type: 'go-to-import' })}
-      >
-        Загрузить новую таблицу
-      </button>
+      <div className="mode__links">
+        {/* Отключены, пока карточка уезжает: обе ссылки уводят с экрана, не
+            дожидаясь отложенного dispatch({type:'swiped'}), и эффект очистки
+            снимает его таймер при размонтировании — свайп терялся молча. */}
+        <button
+          type="button"
+          className="link-button"
+          disabled={exiting !== null}
+          onClick={() => dispatch({ type: 'go-to-library' })}
+        >
+          В библиотеку
+        </button>
+        <button
+          type="button"
+          className="link-button"
+          disabled={exiting !== null}
+          onClick={() => dispatch({ type: 'go-to-import' })}
+        >
+          Загрузить новую таблицу
+        </button>
+      </div>
     </section>
   );
 }

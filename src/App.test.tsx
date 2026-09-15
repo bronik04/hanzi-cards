@@ -3,6 +3,10 @@ import userEvent from '@testing-library/user-event';
 import App from '@/App';
 import { STORAGE_KEY, STORAGE_VERSION } from '@/core/storage';
 import type { StorageLike, StoredState } from '@/core/storage';
+import { createDeck, suggestedName } from '@/core/library';
+import type { Deck } from '@/core/library';
+
+const AT = new Date('2026-09-14T10:00:00Z');
 
 function memoryStorage(initial: Record<string, string> = {}) {
   const data: Record<string, string> = { ...initial };
@@ -43,6 +47,80 @@ describe('App: полный цикл', () => {
     expect(screen.getByRole('heading', { name: 'Колода готова: 2 карточки' })).toBeInTheDocument();
   });
 
+  // ModeScreen имя колоды не показывает — единственное место, где оно видно,
+  // это библиотека, поэтому имя проверяется через переход туда.
+  it('созданная колода получает имя-подсказку', async () => {
+    const user = userEvent.setup();
+    const { storage } = memoryStorage();
+    render(<App storage={storage} />);
+
+    await importDeck(user);
+    await user.click(screen.getByRole('button', { name: 'В библиотеку' }));
+    expect(screen.getByText(suggestedName(new Date()))).toBeInTheDocument();
+  });
+
+  // Экран импорта только показывает поле ввода — реально ли введённое имя
+  // доходит до созданной колоды, видно только тут, через библиотеку.
+  it('введённое имя колоды используется при создании', async () => {
+    const user = userEvent.setup();
+    const { storage } = memoryStorage();
+    render(<App storage={storage} />);
+
+    await user.click(screen.getByLabelText('Таблица со словами'));
+    await user.paste(TABLE);
+    const nameField = screen.getByLabelText('Название колоды');
+    await user.clear(nameField);
+    await user.type(nameField, 'Юнит 3');
+    await user.click(screen.getByRole('button', { name: 'Создать колоду' }));
+
+    await user.click(screen.getByRole('button', { name: 'В библиотеку' }));
+    expect(screen.getByText('Юнит 3')).toBeInTheDocument();
+    expect(screen.queryByText(suggestedName(new Date()))).not.toBeInTheDocument();
+  });
+
+  it('пустое имя колоды заменяется подсказкой', async () => {
+    const user = userEvent.setup();
+    const { storage } = memoryStorage();
+    render(<App storage={storage} />);
+
+    await user.click(screen.getByLabelText('Таблица со словами'));
+    await user.paste(TABLE);
+    await user.clear(screen.getByLabelText('Название колоды'));
+    await user.click(screen.getByRole('button', { name: 'Создать колоду' }));
+
+    await user.click(screen.getByRole('button', { name: 'В библиотеку' }));
+    expect(screen.getByText(suggestedName(new Date()))).toBeInTheDocument();
+  });
+
+  it('имя из одних пробелов заменяется подсказкой, а не сохраняется как есть', async () => {
+    const user = userEvent.setup();
+    const { storage } = memoryStorage();
+    render(<App storage={storage} />);
+
+    await user.click(screen.getByLabelText('Таблица со словами'));
+    await user.paste(TABLE);
+    const nameField = screen.getByLabelText('Название колоды');
+    await user.clear(nameField);
+    await user.type(nameField, '   ');
+    await user.click(screen.getByRole('button', { name: 'Создать колоду' }));
+
+    await user.click(screen.getByRole('button', { name: 'В библиотеку' }));
+    expect(screen.getByText(suggestedName(new Date()))).toBeInTheDocument();
+  });
+
+  // Свежий браузер открывается на импорте, и «Загрузить из файла» есть только
+  // в библиотеке: без выхода отсюда сохранённый файл некуда вернуть.
+  it('с пустой библиотекой из импорта можно уйти в библиотеку', async () => {
+    const user = userEvent.setup();
+    const { storage } = memoryStorage();
+    render(<App storage={storage} />);
+
+    await user.click(screen.getByRole('button', { name: 'В библиотеку' }));
+    expect(screen.getByRole('heading', { name: 'Мои колоды' })).toBeInTheDocument();
+    expect(screen.getByText('Пока ни одной колоды', { exact: false })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Загрузить из файла' })).toBeInTheDocument();
+  });
+
   it('простой режим доходит до экрана итогов', async () => {
     const user = userEvent.setup();
     const { storage } = memoryStorage();
@@ -59,7 +137,7 @@ describe('App: полный цикл', () => {
     expect(screen.getByText('Знаю: 2 · Не знаю: 0')).toBeInTheDocument();
   });
 
-  it('отмена импорта возвращает в тренировку и сохраняет прогресс', async () => {
+  it('отмена импорта не трогает начатую тренировку', async () => {
     const user = userEvent.setup();
     const { storage } = memoryStorage();
     render(<App storage={storage} />);
@@ -70,26 +148,57 @@ describe('App: полный цикл', () => {
     await screen.findByText('谢谢');
 
     await user.click(screen.getByRole('button', { name: 'Загрузить новую таблицу' }));
-    await user.click(screen.getByRole('button', { name: 'Отменить' }));
+    await user.click(screen.getByRole('button', { name: 'В библиотеку' }));
+    expect(screen.getByRole('heading', { name: 'Мои колоды' })).toBeInTheDocument();
 
+    await user.click(screen.getByRole('button', { name: /карточк/ }));
+    await user.click(screen.getByRole('button', { name: 'Продолжить' }));
     expect(screen.getByText('谢谢')).toBeInTheDocument();
     expect(screen.getByTestId('count-known')).toHaveTextContent('1');
   });
 
-  it('сохранённая сессия приводит на экран возобновления', () => {
-    const stored: StoredState = {
-      version: STORAGE_VERSION,
-      cards: [{ id: 'c1', hanzi: '你好', pinyin: 'nǐ hǎo', translation: 'привет' }],
-      direction: 'hanzi-to-translation',
+  // Уход в библиотеку не должен стоить прогресса: проверяется не смена экрана,
+  // а то, что тренировка продолжается с того же места и с тем же счётом.
+  it('выход в библиотеку с экрана возобновления сохраняет прогресс', async () => {
+    const user = userEvent.setup();
+    const { storage } = memoryStorage();
+    render(<App storage={storage} />);
+
+    await importDeck(user);
+    await user.click(screen.getByRole('button', { name: 'Простой просмотр' }));
+    await user.click(screen.getByRole('button', { name: 'Знаю' }));
+    await screen.findByText('谢谢');
+
+    await user.click(screen.getByRole('button', { name: 'В библиотеку' }));
+    await user.click(screen.getByRole('button', { name: /карточк/ }));
+    expect(screen.getByRole('heading', { name: 'Продолжить тренировку?' })).toBeInTheDocument();
+
+    await user.click(screen.getByRole('button', { name: 'В библиотеку' }));
+    expect(screen.getByRole('heading', { name: 'Мои колоды' })).toBeInTheDocument();
+
+    await user.click(screen.getByRole('button', { name: /карточк/ }));
+    await user.click(screen.getByRole('button', { name: 'Продолжить' }));
+    expect(screen.getByText('谢谢')).toBeInTheDocument();
+    expect(screen.getByTestId('count-known')).toHaveTextContent('1');
+  });
+
+  it('сохранённая сессия видна в библиотеке и открывается на возобновлении', async () => {
+    const user = userEvent.setup();
+    const deck: Deck = {
+      ...createDeck('Юнит 1', [{ id: 'c1', hanzi: '你好', pinyin: 'nǐ hǎo', translation: 'привет' }], AT),
       session: {
         mode: 'simple', round: 1, queue: ['c1'], nextRound: [],
         perfectRound: true, finalRound: false, finished: false,
       },
-      stats: { known: 0, unknown: 0 },
     };
+    const stored: StoredState = { version: STORAGE_VERSION, decks: [deck], activeDeckId: deck.id };
     const { storage } = memoryStorage({ [STORAGE_KEY]: JSON.stringify(stored) });
     render(<App storage={storage} />);
 
+    expect(screen.getByRole('heading', { name: 'Мои колоды' })).toBeInTheDocument();
+    expect(screen.getByText('тренировка не закончена', { exact: false })).toBeInTheDocument();
+
+    await user.click(screen.getByRole('button', { name: /^Юнит 1/ }));
     expect(screen.getByRole('heading', { name: 'Продолжить тренировку?' })).toBeInTheDocument();
   });
 
@@ -101,9 +210,21 @@ describe('App: полный цикл', () => {
       },
     };
     render(<App storage={failing} />);
-    expect(
-      screen.getByText('Прогресс не сохраняется: браузер не разрешает запись.'),
-    ).toBeInTheDocument();
+    const warning = screen.getByText('Прогресс не сохраняется', { exact: false });
+    // Совет выгрузить библиотеку — часть предупреждения: при переполнении квоты
+    // файл остаётся единственным способом не потерять колоды.
+    expect(warning).toHaveTextContent('Сохраните библиотеку в файл, чтобы не потерять колоды.');
+  });
+
+  it('предупреждает, если сохранённую библиотеку не удалось прочитать', () => {
+    const { storage } = memoryStorage({ [STORAGE_KEY]: '{не json' });
+    render(<App storage={storage} />);
+
+    const warning = screen.getByText('Сохранённую библиотеку не удалось прочитать', {
+      exact: false,
+    });
+    expect(warning).toHaveTextContent('она осталась в браузере нетронутой');
+    expect(warning).toHaveTextContent('Откройте библиотеку и загрузите её из файла.');
   });
 
   it('выбранное направление применяется к тренировке', async () => {

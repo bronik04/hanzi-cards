@@ -13,7 +13,7 @@ test('приложение работает без сети с первого в
   await context.setOffline(true);
   await page.reload();
 
-  await expect(page.getByRole('heading', { name: 'Вставьте таблицу со словами' })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Новая колода' })).toBeVisible();
   await page.getByLabel('Таблица со словами').fill(SHORT_TABLE);
   await expect(page.getByText('Добавлено 2 карточки')).toBeVisible();
   await expect(page.getByText('nǐ hǎo')).toBeVisible();
@@ -34,6 +34,11 @@ test('сохранённая колода и прогресс переживаю
   await context.setOffline(true);
   await page.reload();
 
+  // Библиотека — первый экран для непустого списка колод, а не сразу
+  // возобновление: до Этапа 1 колода была одна и открывалась сама, теперь
+  // возобновление начинается по клику на неё в списке.
+  await expect(page.getByRole('heading', { name: 'Мои колоды' })).toBeVisible();
+  await page.getByRole('button', { name: /карточк/ }).click();
   await expect(page.getByRole('heading', { name: 'Продолжить тренировку?' })).toBeVisible();
   await page.getByRole('button', { name: 'Продолжить' }).click();
   await expect(page.getByTestId('count-known')).toHaveText('1');

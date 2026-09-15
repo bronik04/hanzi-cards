@@ -1,10 +1,12 @@
 import { DIRECTIONS, DIRECTION_LABELS, hasPinyin } from '@/core/deck';
 import { cardsCount } from '@/core/plural';
-import { useAppDispatch, useAppState } from '@/state/AppContext';
+import { useActiveDeck, useAppDispatch } from '@/state/AppContext';
 
 export default function ModeScreen() {
-  const { cards, direction } = useAppState();
+  const deck = useActiveDeck();
   const dispatch = useAppDispatch();
+  if (deck === null) return null;
+  const { cards, direction } = deck;
   const pinyinAvailable = hasPinyin(cards);
 
   return (
@@ -51,9 +53,14 @@ export default function ModeScreen() {
         </button>
       </div>
 
-      <button type="button" className="link-button" onClick={() => dispatch({ type: 'go-to-import' })}>
-        Загрузить новую таблицу
-      </button>
+      <div className="mode__links">
+        <button type="button" className="link-button" onClick={() => dispatch({ type: 'go-to-library' })}>
+          В библиотеку
+        </button>
+        <button type="button" className="link-button" onClick={() => dispatch({ type: 'go-to-import' })}>
+          Загрузить новую таблицу
+        </button>
+      </div>
     </section>
   );
 }

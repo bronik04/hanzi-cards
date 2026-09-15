@@ -1,9 +1,11 @@
 import { cardsCount } from '@/core/plural';
-import { useAppDispatch, useAppState } from '@/state/AppContext';
+import { useActiveDeck, useAppDispatch } from '@/state/AppContext';
 
 export default function DoneScreen() {
-  const { cards, stats, startedMode } = useAppState();
+  const deck = useActiveDeck();
   const dispatch = useAppDispatch();
+  if (deck === null) return null;
+  const { cards, stats, startedMode } = deck;
 
   return (
     <section className="screen">
@@ -24,9 +26,9 @@ export default function DoneScreen() {
         <button
           type="button"
           className="btn btn--quiet"
-          onClick={() => dispatch({ type: 'go-to-mode' })}
+          onClick={() => dispatch({ type: 'go-to-library' })}
         >
-          В меню
+          В библиотеку
         </button>
       </div>
     </section>

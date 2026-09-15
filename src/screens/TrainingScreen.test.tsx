@@ -4,8 +4,13 @@ import TrainingScreen, { EXIT_DURATION } from '@/screens/TrainingScreen';
 import { renderWithProvider } from '@/test/render';
 import { initialState } from '@/state/appReducer';
 import type { AppState } from '@/state/appReducer';
+import { useAppState, useActiveDeck } from '@/state/AppContext';
+import { createDeck } from '@/core/library';
+import type { Deck } from '@/core/library';
 import type { Card } from '@/core/deck';
-import { createSession } from '@/core/session';
+import { createSession, currentCardId } from '@/core/session';
+
+const AT = new Date('2026-09-14T10:00:00Z');
 
 const cards: Card[] = [
   { id: 'c1', hanzi: '你好', pinyin: 'nǐ hǎo', translation: 'привет' },
@@ -13,14 +18,12 @@ const cards: Card[] = [
 ];
 
 function trainingState(mode: 'simple' | 'ring' = 'simple'): AppState {
-  return {
-    ...initialState,
-    cards,
-    hydrated: true,
-    screen: 'training',
+  const deck: Deck = {
+    ...createDeck('Тестовая колода', cards, AT),
     startedMode: mode,
     session: createSession(['c1', 'c2'], mode),
   };
+  return { ...initialState, hydrated: true, decks: [deck], activeDeckId: deck.id, screen: 'training' };
 }
 
 // Фейковые таймеры здесь не используются: userEvent с ними намертво зависает
@@ -34,6 +37,24 @@ function swipeWithTimers(key: string) {
   act(() => {
     vi.advanceTimersByTime(EXIT_DURATION + 10);
   });
+}
+
+/** Показывает TrainingScreen, пока экран — «training», и рядом — текущий
+ *  экран и id карточки сессии. Так «В библиотеку» проверяется не только по
+ *  тому, что тренировка исчезла с экрана, но и по тому, что прогресс сессии
+ *  активной колоды дожил до этого момента: go-to-mode тоже увёл бы с экрана
+ *  тренировки, но обнулил бы сессию. */
+function TrainingWithProbe() {
+  const { screen: currentScreen } = useAppState();
+  const deck = useActiveDeck();
+  const cardId = deck?.session === null || deck?.session === undefined ? null : currentCardId(deck.session);
+  return (
+    <>
+      {currentScreen === 'training' && <TrainingScreen />}
+      <p data-testid="screen">{currentScreen}</p>
+      <p data-testid="card-id">{cardId ?? 'none'}</p>
+    </>
+  );
 }
 
 describe('TrainingScreen', () => {
@@ -121,6 +142,58 @@ describe('TrainingScreen', () => {
     expect(screen.getByText('你好')).toBeInTheDocument();
   });
 
+  it('«В библиотеку» уводит с экрана тренировки, но сохраняет прогресс сессии', async () => {
+    const user = userEvent.setup();
+    renderWithProvider(<TrainingWithProbe />, trainingState());
+
+    // Продвигаем сессию, чтобы было что терять.
+    await user.click(screen.getByRole('button', { name: 'Знаю' }));
+    await screen.findByText('谢谢');
+    expect(screen.getByTestId('card-id')).toHaveTextContent('c2');
+
+    await user.click(screen.getByRole('button', { name: 'В библиотеку' }));
+
+    expect(screen.getByTestId('screen')).toHaveTextContent('library');
+    // Главное: прогресс не обнулился, как это сделал бы go-to-mode.
+    expect(screen.getByTestId('card-id')).toHaveTextContent('c2');
+  });
+
+  // Таймер dispatch({type:'swiped'}) стоит EXIT_DURATION мс: клик по выходу
+  // раньше, чем он отработает, уводил с экрана и снимался эффектом очистки,
+  // так и не дождавшись dispatch — только что сделанный свайп пропадал молча.
+  //
+  // fireEvent вместо userEvent — нарочно: disabled нужно проверить внутри
+  // настоящего 220-мс окна анимации (фейковые таймеры здесь не годятся, см.
+  // комментарий выше про их связку с userEvent), а асинхронные накладные
+  // расходы userEvent на загруженной машине способны съесть это окно между
+  // кликом и проверкой. fireEvent.click синхронный: состояние обновляется
+  // до возврата из вызова, и проверка не зависит от реального времени.
+  it('«В библиотеку» и «Загрузить новую таблицу» недоступны, пока карточка уезжает: свайп не теряется', async () => {
+    renderWithProvider(<TrainingWithProbe />, trainingState());
+
+    fireEvent.click(screen.getByRole('button', { name: 'Знаю' }));
+
+    // Карточка ещё уезжает: выходы недоступны, а не просто отложены.
+    const exitButton = screen.getByRole('button', { name: 'В библиотеку' });
+    const importButton = screen.getByRole('button', { name: 'Загрузить новую таблицу' });
+    expect(exitButton).toBeDisabled();
+    expect(importButton).toBeDisabled();
+
+    // Клик по недоступной кнопке ничего не делает — свайп ещё не потерян.
+    fireEvent.click(exitButton);
+    expect(screen.getByTestId('screen')).toHaveTextContent('training');
+
+    await screen.findByText('谢谢');
+    expect(screen.getByTestId('count-known')).toHaveTextContent('1');
+    expect(exitButton).not.toBeDisabled();
+    expect(importButton).not.toBeDisabled();
+
+    fireEvent.click(exitButton);
+    expect(screen.getByTestId('screen')).toHaveTextContent('library');
+    // Свайп дожил до выхода: счётчик и прогресс сессии не потерялись.
+    expect(screen.getByTestId('card-id')).toHaveTextContent('c2');
+  });
+
   it('во время подтверждения свайпы не работают', () => {
     renderWithProvider(<TrainingScreen />, trainingState());
     fireEvent.keyDown(window, { key: 'Escape' });
@@ -182,14 +255,23 @@ describe('TrainingScreen', () => {
   });
 
   it('показывает выход, если карточка сессии не найдена', () => {
-    renderWithProvider(<TrainingScreen />, { ...trainingState(), cards: [] });
+    const state = trainingState();
+    const deck = state.decks[0];
+    if (deck === undefined) throw new Error('колода не собрана');
+    renderWithProvider(<TrainingScreen />, {
+      ...state,
+      decks: [{ ...deck, cards: [] }],
+    });
     expect(screen.getByRole('button', { name: 'В меню' })).toBeInTheDocument();
   });
 
   it('учитывает направление при отрисовке', () => {
+    const state = trainingState();
+    const deck = state.decks[0];
+    if (deck === undefined) throw new Error('колода не собрана');
     renderWithProvider(<TrainingScreen />, {
-      ...trainingState(),
-      direction: 'translation-to-hanzi',
+      ...state,
+      decks: [{ ...deck, direction: 'translation-to-hanzi' }],
     });
     expect(screen.getByText('привет')).toBeInTheDocument();
   });

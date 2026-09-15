@@ -1,70 +1,81 @@
 import { hasPinyin } from '@/core/deck';
 import type { Card, Direction } from '@/core/deck';
+import {
+  NO_STATS,
+  createDeck,
+  findDeck,
+  removeDeck,
+  renameDeck,
+  replaceDeck,
+  touchDeck,
+  uniqueName,
+} from '@/core/library';
+import type { Deck } from '@/core/library';
 import { createSession, swipe } from '@/core/session';
-import type { Session, SessionMode, SwipeDirection } from '@/core/session';
-import type { Stats, StoredState } from '@/core/storage';
+import type { SessionMode, SwipeDirection } from '@/core/session';
+import type { StoredState } from '@/core/storage';
+import { mergeImportedDecks } from '@/core/transfer';
 
-export type Screen = 'resume' | 'import' | 'mode' | 'training' | 'done';
+export type Screen = 'library' | 'import' | 'resume' | 'mode' | 'training' | 'done';
 
 export type AppState = {
-  cards: Card[];
-  direction: Direction;
-  session: Session | null;
-  /** Режим, которым сессия была запущена: после колец session.mode становится 'simple'. */
-  startedMode: SessionMode;
-  stats: Stats;
+  decks: Deck[];
+  activeDeckId: string | null;
   screen: Screen;
   /** true после того, как попытка прочитать хранилище завершилась — успехом или нет. */
   hydrated: boolean;
   storageFailed: boolean;
+  /** Сохранённая библиотека не прочиталась: её значение цело, и запись запрещена. */
+  storageUnreadable: boolean;
 };
 
-export type AppAction =
-  | { type: 'restore'; stored: StoredState }
-  | { type: 'hydration-finished' }
-  | { type: 'deck-imported'; cards: Card[] }
+/** Действия, которым нужна открытая колода. */
+type DeckAction =
   | { type: 'direction-changed'; direction: Direction }
   | { type: 'session-started'; mode: SessionMode }
   | { type: 'swiped'; direction: SwipeDirection }
   | { type: 'resume-confirmed' }
-  | { type: 'go-to-import' }
-  | { type: 'import-cancelled' }
-  | { type: 'go-to-mode' }
-  | { type: 'storage-failed' };
+  | { type: 'go-to-mode' };
 
-const NO_STATS: Stats = { known: 0, unknown: 0 };
+export type AppAction =
+  | { type: 'restore'; stored: StoredState }
+  | { type: 'hydration-finished' }
+  | { type: 'deck-created'; name: string; cards: Card[]; now: Date }
+  | { type: 'deck-opened'; id: string; now: Date }
+  | { type: 'deck-renamed'; id: string; name: string }
+  | { type: 'deck-deleted'; id: string }
+  /** `decks` — колоды из файла: слияние с библиотекой делает редьюсер. */
+  | { type: 'decks-imported'; decks: Deck[] }
+  | { type: 'go-to-library' }
+  | { type: 'go-to-import' }
+  | { type: 'storage-failed' }
+  | { type: 'storage-unreadable' }
+  | DeckAction;
 
 export const initialState: AppState = {
-  cards: [],
-  direction: 'hanzi-to-translation',
-  session: null,
-  startedMode: 'simple',
-  stats: NO_STATS,
+  decks: [],
+  activeDeckId: null,
   screen: 'import',
   hydrated: false,
   storageFailed: false,
+  storageUnreadable: false,
 };
+
+export function activeDeck(state: AppState): Deck | null {
+  return findDeck(state.decks, state.activeDeckId);
+}
 
 export function appReducer(state: AppState, action: AppAction): AppState {
   switch (action.type) {
     case 'restore': {
-      const { cards, direction, session, stats } = action.stored;
-      if (cards.length === 0) {
-        return { ...initialState, hydrated: true };
-      }
-      const resumable = session !== null && !session.finished;
+      const { decks, activeDeckId } = action.stored;
       return {
         ...state,
-        cards,
-        // Как и при импорте: направление на пиньинь бессмысленно без пиньиня,
-        // а сохранённое состояние могло быть записано другой версией.
-        direction: availableDirection(direction, cards),
-        session: resumable ? session : null,
-        // Из session.mode режим не вывести: после колец сессия становится
-        // простой, и «Начать заново» запускало бы не тот режим.
-        startedMode: action.stored.startedMode ?? (session?.mode === 'ring' ? 'ring' : 'simple'),
-        stats,
-        screen: resumable ? 'resume' : 'mode',
+        decks: decks.map(withAvailableDirection),
+        activeDeckId,
+        // Правило действует только здесь: дальше экран меняют действия, и
+        // удаление последней колоды оставляет пользователя в библиотеке.
+        screen: decks.length === 0 ? 'import' : 'library',
         hydrated: true,
       };
     }
@@ -72,64 +83,122 @@ export function appReducer(state: AppState, action: AppAction): AppState {
     case 'hydration-finished':
       return { ...state, hydrated: true };
 
-    case 'deck-imported':
+    case 'deck-created': {
+      const deck = createDeck(uniqueName(state.decks, action.name), action.cards, action.now);
+      return { ...state, decks: [...state.decks, deck], activeDeckId: deck.id, screen: 'mode' };
+    }
+
+    case 'deck-opened': {
+      const deck = findDeck(state.decks, action.id);
+      if (deck === null) return state;
+      const resumable = deck.session !== null && !deck.session.finished;
       return {
         ...state,
-        cards: action.cards,
-        direction: availableDirection(state.direction, action.cards),
-        session: null,
-        stats: NO_STATS,
-        screen: 'mode',
+        decks: touchDeck(state.decks, action.id, action.now),
+        activeDeckId: action.id,
+        screen: resumable ? 'resume' : 'mode',
       };
+    }
+
+    case 'deck-renamed':
+      return { ...state, decks: renameDeck(state.decks, action.id, action.name) };
+
+    case 'deck-deleted':
+      return {
+        ...state,
+        decks: removeDeck(state.decks, action.id),
+        activeDeckId: state.activeDeckId === action.id ? null : state.activeDeckId,
+        screen: 'library',
+      };
+
+    case 'decks-imported': {
+      // Слияние здесь, а не в обработчике файла: тот замыкает список колод на
+      // рендер, где началось чтение, и правку, сделанную пока файл читался,
+      // вычислил бы обратно. Заодно ни один вызов не заменит библиотеку.
+      const decks = mergeImportedDecks(state.decks, action.decks);
+      // Висячий activeDeckId рушит инвариант isStoredState — следующая
+      // загрузка хранилища сочла бы состояние повреждённым и стёрла библиотеку.
+      const activeDeckId = decks.some((deck) => deck.id === state.activeDeckId)
+        ? state.activeDeckId
+        : null;
+      // Файл — это пользователь, вручную подтвердивший целую годную библиотеку:
+      // с этого момента можно снова писать в хранилище поверх нечитаемого
+      // значения, а не оставлять запись выключенной навсегда.
+      return { ...state, decks, activeDeckId, screen: 'library', storageUnreadable: false };
+    }
+
+    case 'go-to-library':
+      return { ...state, screen: 'library' };
+
+    case 'go-to-import':
+      return { ...state, screen: 'import' };
+
+    case 'storage-failed':
+      return { ...state, storageFailed: true };
+
+    // Гидратация закончена, но пустой библиотекой: записывать её поверх
+    // нечитаемого значения нельзя, поэтому флаг заодно запрещает запись.
+    case 'storage-unreadable':
+      return { ...state, hydrated: true, storageUnreadable: true };
 
     case 'direction-changed':
-      return { ...state, direction: action.direction };
+    case 'session-started':
+    case 'swiped':
+    case 'resume-confirmed':
+    case 'go-to-mode':
+      return applyToActiveDeck(state, action);
+  }
+}
+
+function applyToActiveDeck(state: AppState, action: DeckAction): AppState {
+  const deck = activeDeck(state);
+  if (deck === null) return state;
+
+  switch (action.type) {
+    case 'direction-changed':
+      return withDeck(state, { ...deck, direction: action.direction });
 
     case 'session-started':
-      return {
-        ...state,
-        session: createSession(
-          state.cards.map((card) => card.id),
-          action.mode,
-        ),
-        startedMode: action.mode,
-        stats: NO_STATS,
-        screen: 'training',
-      };
+      return withDeck(
+        state,
+        {
+          ...deck,
+          session: createSession(
+            deck.cards.map((card) => card.id),
+            action.mode,
+          ),
+          startedMode: action.mode,
+          stats: NO_STATS,
+        },
+        'training',
+      );
 
     case 'swiped': {
-      if (state.session === null) return state;
-      const session = swipe(state.session, action.direction);
+      if (deck.session === null) return state;
+      const session = swipe(deck.session, action.direction);
       const stats =
         action.direction === 'right'
-          ? { ...state.stats, known: state.stats.known + 1 }
-          : { ...state.stats, unknown: state.stats.unknown + 1 };
-      return { ...state, session, stats, screen: session.finished ? 'done' : 'training' };
+          ? { ...deck.stats, known: deck.stats.known + 1 }
+          : { ...deck.stats, unknown: deck.stats.unknown + 1 };
+      return withDeck(state, { ...deck, session, stats }, session.finished ? 'done' : 'training');
     }
 
     case 'resume-confirmed':
       return { ...state, screen: 'training' };
 
-    case 'go-to-import':
-      return { ...state, screen: 'import' };
-
-    // Отмена обязана быть безвредной: сессия остаётся нетронутой,
-    // экран возвращается туда, откуда пришли.
-    case 'import-cancelled': {
-      const training = state.session !== null && !state.session.finished;
-      return { ...state, screen: training ? 'training' : 'mode' };
-    }
-
     case 'go-to-mode':
-      return { ...state, session: null, screen: 'mode' };
-
-    case 'storage-failed':
-      return { ...state, storageFailed: true };
+      return withDeck(state, { ...deck, session: null }, 'mode');
   }
 }
 
+function withDeck(state: AppState, deck: Deck, screen?: Screen): AppState {
+  return { ...state, decks: replaceDeck(state.decks, deck), screen: screen ?? state.screen };
+}
+
 /** Направление на пиньинь бессмысленно для колоды без пиньиня. */
-function availableDirection(direction: Direction, cards: readonly Card[]): Direction {
-  if (direction === 'hanzi-to-pinyin' && !hasPinyin(cards)) return 'hanzi-to-translation';
-  return direction;
+function withAvailableDirection(deck: Deck): Deck {
+  if (deck.direction === 'hanzi-to-pinyin' && !hasPinyin(deck.cards)) {
+    return { ...deck, direction: 'hanzi-to-translation' };
+  }
+  return deck;
 }

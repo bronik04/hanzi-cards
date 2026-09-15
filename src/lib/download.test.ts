@@ -2,12 +2,21 @@ import { downloadText } from '@/lib/download';
 
 const MOCK_URL = 'blob:http://localhost/mock-url';
 
+// Захвачены до первого beforeEach: с ними сверяется восстановление ниже.
+const ORIGINAL_CREATE_OBJECT_URL = URL.createObjectURL;
+const ORIGINAL_REVOKE_OBJECT_URL = URL.revokeObjectURL;
+
 describe('downloadText', () => {
   let clickSpy: ReturnType<typeof vi.spyOn>;
 
   beforeEach(() => {
-    URL.createObjectURL = vi.fn(() => MOCK_URL);
-    URL.revokeObjectURL = vi.fn();
+    // vi.stubGlobal, а не прямое присваивание: прямое присваивание меняет
+    // URL насовсем, и все последующие тесты в процессе работают с моком.
+    vi.stubGlobal('URL', {
+      ...URL,
+      createObjectURL: vi.fn(() => MOCK_URL),
+      revokeObjectURL: vi.fn(),
+    });
     // Настоящий клик по ссылке пытается перейти по blob-адресу: jsdom не умеет
     // скачивать файлы и шумит в консоль «Not implemented: navigation».
     // Подменяем click, чтобы проверять саму функцию, а не поведение jsdom.
@@ -16,6 +25,7 @@ describe('downloadText', () => {
 
   afterEach(() => {
     clickSpy.mockRestore();
+    vi.unstubAllGlobals();
   });
 
   it('создаёт ссылку с именем файла и адресом блоба, кликает и убирает её из документа', () => {
@@ -44,5 +54,15 @@ describe('downloadText', () => {
     } finally {
       vi.useRealTimers();
     }
+  });
+});
+
+// Отдельный describe, а не тест внутри downloadText: свой afterEach должен
+// успеть отработать первым, иначе следующий beforeEach просто подменит
+// глобал заново, и проверка ничего не покажет.
+describe('после файла', () => {
+  it('URL.createObjectURL и revokeObjectURL возвращаются к исходным, а не остаются моком', () => {
+    expect(URL.createObjectURL).toBe(ORIGINAL_CREATE_OBJECT_URL);
+    expect(URL.revokeObjectURL).toBe(ORIGINAL_REVOKE_OBJECT_URL);
   });
 });

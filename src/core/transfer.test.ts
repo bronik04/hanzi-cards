@@ -163,7 +163,9 @@ describe('exportDeckTable', () => {
 
 describe('имена файлов', () => {
   it('библиотека называется по дате', () => {
-    expect(libraryFileName(AT)).toBe('hanzi-cards-2026-09-14.json');
+    // Локальная дата, а не AT: имя файла берёт локальные поля, и при большом
+    // отрицательном смещении 10:00 UTC — это ещё предыдущий день.
+    expect(libraryFileName(new Date(2026, 8, 14))).toBe('hanzi-cards-2026-09-14.json');
   });
 
   // TZ фиксирован на время теста, чтобы результат не зависел от часового
@@ -176,7 +178,10 @@ describe('имена файлов', () => {
     });
 
     afterEach(() => {
-      process.env.TZ = ORIGINAL_TZ;
+      // Присваивание undefined даёт строку «undefined» — не зону, и Node молча
+      // переводит процесс на UTC до конца работы воркера, ломая соседние файлы.
+      if (ORIGINAL_TZ === undefined) delete process.env.TZ;
+      else process.env.TZ = ORIGINAL_TZ;
     });
 
     it('берёт локальную дату, а не UTC, когда они расходятся', () => {

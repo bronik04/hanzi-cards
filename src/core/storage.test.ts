@@ -11,7 +11,9 @@ import {
 import type { LoadOutcome, StorageLike, StoredState } from '@/core/storage';
 import type { Deck } from '@/core/library';
 
-const AT = new Date('2026-09-14T10:00:00Z');
+// Локальный конструктор, а не UTC-строка: suggestedName берёт локальные поля,
+// и западнее Гринвича 10:00 UTC — это уже предыдущий день.
+const AT = new Date(2026, 8, 14, 10, 0, 0);
 
 function memoryStorage(
   initial: Record<string, string> = {},

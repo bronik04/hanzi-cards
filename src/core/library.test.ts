@@ -116,12 +116,14 @@ describe('uniqueName', () => {
 
 describe('suggestedName', () => {
   it('подставляет дату по-русски', () => {
-    expect(suggestedName(new Date('2026-09-14T10:00:00Z'))).toBe('Колода от 14 сентября 2026');
+    expect(suggestedName(new Date(2026, 8, 14))).toBe('Колода от 14 сентября 2026');
   });
 
+  // Даты строятся локальным конструктором, а не из UTC-строки: подсказка берёт
+  // локальные поля, и западнее Гринвича UTC-полночь 1 января — ещё 31 декабря.
   it('работает в январе и декабре', () => {
-    expect(suggestedName(new Date('2026-01-01T00:00:00Z'))).toBe('Колода от 1 января 2026');
-    expect(suggestedName(new Date('2026-12-31T00:00:00Z'))).toBe('Колода от 31 декабря 2026');
+    expect(suggestedName(new Date(2026, 0, 1))).toBe('Колода от 1 января 2026');
+    expect(suggestedName(new Date(2026, 11, 31))).toBe('Колода от 31 декабря 2026');
   });
 
   // TZ фиксирован явно на время теста: иначе результат зависел бы от часового
@@ -134,7 +136,10 @@ describe('suggestedName', () => {
     });
 
     afterEach(() => {
-      process.env.TZ = ORIGINAL_TZ;
+      // Присваивание undefined даёт строку «undefined» — не зону, и Node молча
+      // переводит процесс на UTC до конца работы воркера, ломая соседние файлы.
+      if (ORIGINAL_TZ === undefined) delete process.env.TZ;
+      else process.env.TZ = ORIGINAL_TZ;
     });
 
     it('берёт локальную дату, а не UTC, когда они расходятся', () => {

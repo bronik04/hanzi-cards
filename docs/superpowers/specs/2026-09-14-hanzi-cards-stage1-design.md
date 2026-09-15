@@ -115,6 +115,7 @@ type AppState = {
   screen: Screen;
   hydrated: boolean;
   storageFailed: boolean;
+  storageUnreadable: boolean;
 };
 ```
 
@@ -127,13 +128,14 @@ type AppState = {
 | Действие | Что делает |
 |----------|-----------|
 | `restore`, `hydration-finished`, `storage-failed` | как в Этапе 0 |
+| `storage-unreadable` | хранилище есть, но не читается: запись выключается, чтобы не затереть его |
 | `deck-created { name, cards }` | добавляет колоду, делает её активной, ведёт на выбор режима |
 | `deck-opened { id }` | делает колоду активной, обновляет `lastOpenedAt`, ведёт на возобновление или выбор режима |
 | `deck-renamed { id, name }` | меняет имя |
 | `deck-deleted { id }` | удаляет колоду вместе с её сессией |
-| `decks-imported { decks }` | добавляет колоды из файла к существующим |
+| `decks-imported { decks }` | сливает колоды из файла с существующими; слияние живёт в редьюсере, а не в обработчике, иначе правка библиотеки во время чтения файла откатывалась бы |
 | `go-to-library` | возврат в библиотеку |
-| `go-to-import`, `import-cancelled` | как в Этапе 0, но возврат в библиотеку |
+| `go-to-import` | как в Этапе 0. Обратно — общей кнопкой «В библиотеку», без отдельного действия отмены |
 | `direction-changed`, `session-started`, `swiped`, `resume-confirmed`, `go-to-mode` | работают с активной колодой |
 
 Действия, требующие активной колоды, при `activeDeckId === null` возвращают

@@ -59,6 +59,55 @@ describe('App: полный цикл', () => {
     expect(screen.getByText(suggestedName(new Date()))).toBeInTheDocument();
   });
 
+  // Экран импорта только показывает поле ввода — реально ли введённое имя
+  // доходит до созданной колоды, видно только тут, через библиотеку.
+  it('введённое имя колоды используется при создании', async () => {
+    const user = userEvent.setup();
+    const { storage } = memoryStorage();
+    render(<App storage={storage} />);
+
+    await user.click(screen.getByLabelText('Таблица со словами'));
+    await user.paste(TABLE);
+    const nameField = screen.getByLabelText('Название колоды');
+    await user.clear(nameField);
+    await user.type(nameField, 'Юнит 3');
+    await user.click(screen.getByRole('button', { name: 'Создать колоду' }));
+
+    await user.click(screen.getByRole('button', { name: 'В библиотеку' }));
+    expect(screen.getByText('Юнит 3')).toBeInTheDocument();
+    expect(screen.queryByText(suggestedName(new Date()))).not.toBeInTheDocument();
+  });
+
+  it('пустое имя колоды заменяется подсказкой', async () => {
+    const user = userEvent.setup();
+    const { storage } = memoryStorage();
+    render(<App storage={storage} />);
+
+    await user.click(screen.getByLabelText('Таблица со словами'));
+    await user.paste(TABLE);
+    await user.clear(screen.getByLabelText('Название колоды'));
+    await user.click(screen.getByRole('button', { name: 'Создать колоду' }));
+
+    await user.click(screen.getByRole('button', { name: 'В библиотеку' }));
+    expect(screen.getByText(suggestedName(new Date()))).toBeInTheDocument();
+  });
+
+  it('имя из одних пробелов заменяется подсказкой, а не сохраняется как есть', async () => {
+    const user = userEvent.setup();
+    const { storage } = memoryStorage();
+    render(<App storage={storage} />);
+
+    await user.click(screen.getByLabelText('Таблица со словами'));
+    await user.paste(TABLE);
+    const nameField = screen.getByLabelText('Название колоды');
+    await user.clear(nameField);
+    await user.type(nameField, '   ');
+    await user.click(screen.getByRole('button', { name: 'Создать колоду' }));
+
+    await user.click(screen.getByRole('button', { name: 'В библиотеку' }));
+    expect(screen.getByText(suggestedName(new Date()))).toBeInTheDocument();
+  });
+
   it('простой режим доходит до экрана итогов', async () => {
     const user = userEvent.setup();
     const { storage } = memoryStorage();

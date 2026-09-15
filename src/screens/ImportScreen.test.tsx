@@ -75,6 +75,22 @@ describe('ImportScreen', () => {
     expect(await screen.findByDisplayValue('Юнит 5')).toBeInTheDocument();
   });
 
+  it('файл с именем из одного расширения не затирает подсказку', async () => {
+    const user = userEvent.setup();
+    renderWithProvider(<ImportScreen />);
+
+    const field = screen.getByLabelText('Название колоды');
+    const before = (field as HTMLInputElement).value;
+
+    const file = new File(['你好\tni3 hao3\tпривет'], '.tsv', { type: 'text/plain' });
+    await user.upload(screen.getByLabelText('Файл с таблицей'), file);
+
+    // Ждём обработки файла: превью появляется из того же reader.onload,
+    // что и (несостоявшееся) обновление имени.
+    await screen.findByText('你好');
+    expect(field).toHaveValue(before);
+  });
+
   it('введённое имя не затирается подсказкой из файла', async () => {
     const user = userEvent.setup();
     renderWithProvider(<ImportScreen />);

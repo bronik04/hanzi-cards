@@ -37,7 +37,10 @@ export default function ImportScreen() {
       setFileError('');
       setText(String(reader.result ?? ''));
       // Имя файла подсказывает имя колоды, но только пока пользователь не ввёл своё.
-      if (!nameTouched) setName(file.name.replace(/\.[^.]+$/, ''));
+      // Файл вроде «.tsv» после отсечения расширения не оставляет имени —
+      // тогда подсказку не трогаем, иначе поле молча опустеет без объяснений.
+      const stripped = file.name.replace(/\.[^.]+$/, '');
+      if (!nameTouched && stripped !== '') setName(stripped);
     };
     // Молча очищать поле нельзя: со стороны это выглядит так, будто
     // приложение съело уже набранную таблицу.

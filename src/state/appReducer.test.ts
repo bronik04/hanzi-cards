@@ -204,14 +204,9 @@ describe('навигация', () => {
     expect(appReducer(withOneDeck(), { type: 'go-to-library' }).screen).toBe('library');
   });
 
-  it('отмена импорта возвращает в библиотеку, если колоды есть', () => {
-    const state = appReducer(withOneDeck(), { type: 'go-to-import' });
-    expect(appReducer(state, { type: 'import-cancelled' }).screen).toBe('library');
-  });
-
-  it('отмена импорта при пустой библиотеке оставляет на импорте', () => {
+  it('выход из импорта ведёт в библиотеку и при пустой библиотеке', () => {
     const state = { ...hydrated(), screen: 'import' as const };
-    expect(appReducer(state, { type: 'import-cancelled' }).screen).toBe('import');
+    expect(appReducer(state, { type: 'go-to-library' }).screen).toBe('library');
   });
 
   it('decks-imported заменяет список и ведёт в библиотеку', () => {

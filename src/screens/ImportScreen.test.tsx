@@ -54,9 +54,11 @@ describe('ImportScreen', () => {
     expect(screen.getByText('hello, greeting')).toBeInTheDocument();
   });
 
-  it('кнопка отмены скрыта, пока колоды нет', () => {
+  // Пустая библиотека — это свежий браузер или браузер после чистки: выход
+  // отсюда единственный способ добраться до «Загрузить из файла».
+  it('выход в библиотеку есть и при пустой библиотеке', () => {
     renderWithProvider(<ImportScreen />);
-    expect(screen.queryByRole('button', { name: 'Отменить' })).not.toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'В библиотеку' })).toBeInTheDocument();
   });
 
   it('подставляет имя-подсказку', () => {

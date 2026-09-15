@@ -44,7 +44,6 @@ export type AppAction =
   | { type: 'decks-imported'; decks: Deck[] }
   | { type: 'go-to-library' }
   | { type: 'go-to-import' }
-  | { type: 'import-cancelled' }
   | { type: 'storage-failed' }
   | DeckAction;
 
@@ -120,10 +119,6 @@ export function appReducer(state: AppState, action: AppAction): AppState {
 
     case 'go-to-import':
       return { ...state, screen: 'import' };
-
-    // Отмена обязана быть безвредной: колоды остаются нетронутыми.
-    case 'import-cancelled':
-      return { ...state, screen: state.decks.length === 0 ? 'import' : 'library' };
 
     case 'storage-failed':
       return { ...state, storageFailed: true };

@@ -5,7 +5,7 @@ import { suggestedName } from '@/core/library';
 import { cardsCount, plural } from '@/core/plural';
 import { parseTable } from '@/core/parse';
 import type { ColumnMode } from '@/core/parse';
-import { useAppDispatch, useAppState } from '@/state/AppContext';
+import { useAppDispatch } from '@/state/AppContext';
 
 const PREVIEW_LIMIT = 5;
 
@@ -16,7 +16,6 @@ const COLUMN_OPTIONS: ReadonlyArray<{ value: ColumnMode; label: string }> = [
 ];
 
 export default function ImportScreen() {
-  const { decks } = useAppState();
   const dispatch = useAppDispatch();
   const [text, setText] = useState('');
   const [columnMode, setColumnMode] = useState<ColumnMode>('auto');
@@ -144,15 +143,16 @@ export default function ImportScreen() {
         Создать колоду
       </button>
 
-      {decks.length > 0 && (
-        <button
-          type="button"
-          className="link-button"
-          onClick={() => dispatch({ type: 'import-cancelled' })}
-        >
-          Отменить
-        </button>
-      )}
+      {/* Выход не зависит от числа колод: при пустой библиотеке он нужнее
+          всего — «Загрузить из файла» живёт только там, и после чистки
+          браузера это единственный путь к сохранённому файлу. */}
+      <button
+        type="button"
+        className="link-button"
+        onClick={() => dispatch({ type: 'go-to-library' })}
+      >
+        В библиотеку
+      </button>
     </section>
   );
 }

@@ -108,6 +108,19 @@ describe('App: полный цикл', () => {
     expect(screen.getByText(suggestedName(new Date()))).toBeInTheDocument();
   });
 
+  // Свежий браузер открывается на импорте, и «Загрузить из файла» есть только
+  // в библиотеке: без выхода отсюда сохранённый файл некуда вернуть.
+  it('с пустой библиотекой из импорта можно уйти в библиотеку', async () => {
+    const user = userEvent.setup();
+    const { storage } = memoryStorage();
+    render(<App storage={storage} />);
+
+    await user.click(screen.getByRole('button', { name: 'В библиотеку' }));
+    expect(screen.getByRole('heading', { name: 'Мои колоды' })).toBeInTheDocument();
+    expect(screen.getByText('Пока ни одной колоды', { exact: false })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Загрузить из файла' })).toBeInTheDocument();
+  });
+
   it('простой режим доходит до экрана итогов', async () => {
     const user = userEvent.setup();
     const { storage } = memoryStorage();
@@ -135,7 +148,7 @@ describe('App: полный цикл', () => {
     await screen.findByText('谢谢');
 
     await user.click(screen.getByRole('button', { name: 'Загрузить новую таблицу' }));
-    await user.click(screen.getByRole('button', { name: 'Отменить' }));
+    await user.click(screen.getByRole('button', { name: 'В библиотеку' }));
     expect(screen.getByRole('heading', { name: 'Мои колоды' })).toBeInTheDocument();
 
     await user.click(screen.getByRole('button', { name: /карточк/ }));

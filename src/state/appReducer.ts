@@ -121,7 +121,10 @@ export function appReducer(state: AppState, action: AppAction): AppState {
       const activeDeckId = decks.some((deck) => deck.id === state.activeDeckId)
         ? state.activeDeckId
         : null;
-      return { ...state, decks, activeDeckId, screen: 'library' };
+      // Файл — это пользователь, вручную подтвердивший целую годную библиотеку:
+      // с этого момента можно снова писать в хранилище поверх нечитаемого
+      // значения, а не оставлять запись выключенной навсегда.
+      return { ...state, decks, activeDeckId, screen: 'library', storageUnreadable: false };
     }
 
     case 'go-to-library':

@@ -1,4 +1,4 @@
-import { renderHook } from '@testing-library/react';
+import { act, renderHook } from '@testing-library/react';
 import { useReducer } from 'react';
 import { usePersistence } from '@/hooks/usePersistence';
 import { LEGACY_STORAGE_KEY, STORAGE_KEY, STORAGE_VERSION } from '@/core/storage';
@@ -99,6 +99,39 @@ describe('usePersistence', () => {
     expect(result.current.storageUnreadable).toBe(true);
     expect(data[STORAGE_KEY]).toBe(broken);
     expect(data[LEGACY_STORAGE_KEY]).toBe(legacy);
+  });
+
+  // Круглый путь, а не только флаг: предупреждение в App.tsx велит открыть
+  // библиотеку и загрузить файл именно затем, чтобы запись снова заработала.
+  it('после импорта библиотеки поверх нечитаемого значения запись возобновляется', () => {
+    const broken = '{не json';
+    const { storage, data } = memoryStorage({ [STORAGE_KEY]: broken });
+    const { result } = renderHook(() => {
+      const [state, dispatch] = useReducer(appReducer, initialState);
+      usePersistence(state, dispatch, storage);
+      return { state, dispatch };
+    });
+
+    expect(result.current.state.storageUnreadable).toBe(true);
+    expect(data[STORAGE_KEY]).toBe(broken);
+
+    // Пользователь открывает библиотеку и загружает файл — это и есть импорт:
+    // полная годная библиотека, за которую пользователь явно поручился.
+    act(() => {
+      result.current.dispatch({ type: 'decks-imported', decks: [deck] });
+    });
+
+    expect(result.current.state.storageUnreadable).toBe(false);
+    const afterImport = JSON.parse(data[STORAGE_KEY] ?? '{}') as StoredState;
+    expect(afterImport.decks.map((d) => d.id)).toEqual([deck.id]);
+    expect(afterImport.decks[0]?.name).toBe('Юнит 1');
+
+    // Флаг снят не только для этого кадра — следующее изменение тоже пишется.
+    act(() => {
+      result.current.dispatch({ type: 'deck-renamed', id: deck.id, name: 'Юнит 1 (переименована)' });
+    });
+    const afterRename = JSON.parse(data[STORAGE_KEY] ?? '{}') as StoredState;
+    expect(afterRename.decks[0]?.name).toBe('Юнит 1 (переименована)');
   });
 
   it('поднимает storageFailed, если запись отказала', () => {

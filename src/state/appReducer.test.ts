@@ -235,6 +235,14 @@ describe('навигация', () => {
     expect(result.activeDeckId).toBeNull();
   });
 
+  // Файл — это пользователь, вручную подтвердивший целую библиотеку: с этого
+  // момента можно снова писать в хранилище поверх нечитаемого значения.
+  it('decks-imported снимает storageUnreadable', () => {
+    const state = { ...withOneDeck(), storageUnreadable: true };
+    const result = appReducer(state, { type: 'decks-imported', decks: [] });
+    expect(result.storageUnreadable).toBe(false);
+  });
+
   it('storage-failed поднимает флаг', () => {
     expect(appReducer(initialState, { type: 'storage-failed' }).storageFailed).toBe(true);
   });

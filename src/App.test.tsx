@@ -157,6 +157,31 @@ describe('App: полный цикл', () => {
     expect(screen.getByTestId('count-known')).toHaveTextContent('1');
   });
 
+  // Уход в библиотеку не должен стоить прогресса: проверяется не смена экрана,
+  // а то, что тренировка продолжается с того же места и с тем же счётом.
+  it('выход в библиотеку с экрана возобновления сохраняет прогресс', async () => {
+    const user = userEvent.setup();
+    const { storage } = memoryStorage();
+    render(<App storage={storage} />);
+
+    await importDeck(user);
+    await user.click(screen.getByRole('button', { name: 'Простой просмотр' }));
+    await user.click(screen.getByRole('button', { name: 'Знаю' }));
+    await screen.findByText('谢谢');
+
+    await user.click(screen.getByRole('button', { name: 'В библиотеку' }));
+    await user.click(screen.getByRole('button', { name: /карточк/ }));
+    expect(screen.getByRole('heading', { name: 'Продолжить тренировку?' })).toBeInTheDocument();
+
+    await user.click(screen.getByRole('button', { name: 'В библиотеку' }));
+    expect(screen.getByRole('heading', { name: 'Мои колоды' })).toBeInTheDocument();
+
+    await user.click(screen.getByRole('button', { name: /карточк/ }));
+    await user.click(screen.getByRole('button', { name: 'Продолжить' }));
+    expect(screen.getByText('谢谢')).toBeInTheDocument();
+    expect(screen.getByTestId('count-known')).toHaveTextContent('1');
+  });
+
   it('сохранённая сессия видна в библиотеке и открывается на возобновлении', async () => {
     const user = userEvent.setup();
     const deck: Deck = {

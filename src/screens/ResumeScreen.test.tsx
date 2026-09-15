@@ -42,19 +42,19 @@ describe('ResumeScreen', () => {
     expect(screen.getByText('2 карточки · Блок 1 из 1')).toBeInTheDocument();
   });
 
-  it('загрузка новой таблицы требует подтверждения', async () => {
+  // Новая колода добавляется к библиотеке и сессию этой колоды не трогает:
+  // предупреждать о потере прогресса значит пугать тем, чего не случится.
+  it('загрузка новой таблицы не требует подтверждения и не грозит потерей', async () => {
     const user = userEvent.setup();
     renderWithProvider(<ResumeScreen />, resumeState());
     await user.click(screen.getByRole('button', { name: 'Загрузить новую' }));
-    expect(screen.getByText('Прогресс текущей тренировки будет потерян.')).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: 'Да, загрузить новую' })).toBeInTheDocument();
+
+    expect(screen.queryByText('Прогресс текущей тренировки будет потерян.')).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Да, загрузить новую' })).not.toBeInTheDocument();
   });
 
-  it('подтверждение можно отменить', async () => {
-    const user = userEvent.setup();
+  it('с экрана возобновления есть выход в библиотеку', () => {
     renderWithProvider(<ResumeScreen />, resumeState());
-    await user.click(screen.getByRole('button', { name: 'Загрузить новую' }));
-    await user.click(screen.getByRole('button', { name: 'Отмена' }));
-    expect(screen.queryByRole('button', { name: 'Да, загрузить новую' })).not.toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'В библиотеку' })).toBeInTheDocument();
   });
 });

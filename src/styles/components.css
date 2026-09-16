@@ -539,3 +539,28 @@
   color: var(--no);
   border: 1.5px solid #ff5a5f6b;
 }
+
+.result-ring {
+  position: relative;
+  width: 136px;
+  height: 136px;
+}
+
+.result-ring__track {
+  stroke: #ffffff1a;
+}
+
+.result-ring__fill {
+  stroke: var(--yes);
+  stroke-linecap: round;
+}
+
+.result-ring__value {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  font-size: 1.8rem;
+  font-weight: var(--weight-heavy);
+  font-variant-numeric: tabular-nums;
+}

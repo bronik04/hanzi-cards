@@ -38,7 +38,9 @@ describe('DoneScreen', () => {
     renderWithProvider(<DoneScreen />, stateWith());
     expect(screen.getByRole('heading', { name: 'Готово' })).toBeInTheDocument();
     expect(screen.getByText('2 карточки')).toBeInTheDocument();
-    expect(screen.getByText('Знаю: 1 · Не знаю: 1')).toBeInTheDocument();
+    expect(screen.getByTestId('count-known')).toHaveTextContent('1');
+    expect(screen.getByTestId('count-unknown')).toHaveTextContent('1');
+    expect(screen.getByRole('img', { name: 'Верных ответов: 50%' })).toBeInTheDocument();
   });
 
   it('«В библиотеку» ведёт в библиотеку', async () => {

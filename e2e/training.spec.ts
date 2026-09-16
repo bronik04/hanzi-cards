@@ -27,7 +27,9 @@ test('режим колец проходится до экрана итогов'
   await know.click();
 
   await expect(page.getByRole('heading', { name: 'Готово' })).toBeVisible();
-  await expect(page.getByText('Знаю: 16 · Не знаю: 0')).toBeVisible();
+  await expect(page.getByRole('img', { name: 'Верных ответов: 100%' })).toBeVisible();
+  await expect(page.getByTestId('count-known')).toHaveText('✓ 16');
+  await expect(page.getByTestId('count-unknown')).toHaveText('✕ 0');
 });
 
 /** Текст баннера и геометрия — одним чтением страницы. Баннер живёт 1800 мс, и

@@ -134,7 +134,9 @@ describe('App: полный цикл', () => {
     await user.click(screen.getByRole('button', { name: 'Знаю' }));
 
     expect(await screen.findByRole('heading', { name: 'Готово' })).toBeInTheDocument();
-    expect(screen.getByText('Знаю: 2 · Не знаю: 0')).toBeInTheDocument();
+    expect(screen.getByTestId('count-known')).toHaveTextContent('2');
+    expect(screen.getByTestId('count-unknown')).toHaveTextContent('0');
+    expect(screen.getByRole('img', { name: 'Верных ответов: 100%' })).toBeInTheDocument();
   });
 
   it('отмена импорта не трогает начатую тренировку', async () => {

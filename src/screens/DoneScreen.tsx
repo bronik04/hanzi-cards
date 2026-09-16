@@ -1,3 +1,5 @@
+import Counters from '@/components/Counters';
+import ResultRing from '@/components/ResultRing';
 import { cardsCount } from '@/core/plural';
 import { useActiveDeck, useAppDispatch } from '@/state/AppContext';
 
@@ -10,10 +12,10 @@ export default function DoneScreen() {
   return (
     <section className="screen">
       <h1>Готово</h1>
-      <p className="done__info">
-        {cardsCount(cards.length)}
-      </p>
-      <p className="done__stats">{`Знаю: ${stats.known} · Не знаю: ${stats.unknown}`}</p>
+      <p className="done__info">{cardsCount(cards.length)}</p>
+
+      <ResultRing percent={percentKnown(stats)} />
+      <Counters known={stats.known} unknown={stats.unknown} />
 
       <div className="done__buttons">
         <button
@@ -33,4 +35,10 @@ export default function DoneScreen() {
       </div>
     </section>
   );
+}
+
+/** Доля верных за тренировку. Без ответов — ноль, а не деление на ноль. */
+function percentKnown({ known, unknown }: { known: number; unknown: number }): number {
+  const total = known + unknown;
+  return total === 0 ? 0 : Math.round((known / total) * 100);
 }

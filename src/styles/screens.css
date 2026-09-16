@@ -130,8 +130,7 @@
 }
 
 .resume__info,
-.done__info,
-.done__stats {
+.done__info {
   margin: 0;
   color: var(--text-muted);
 }

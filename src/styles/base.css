@@ -1,0 +1,42 @@
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--text);
+  font-family: var(--font-ui);
+}
+
+h1 {
+  font-size: clamp(1.4rem, 4vh, 2.2rem);
+  font-weight: var(--weight-bold);
+  margin: 0;
+  text-align: center;
+}
+
+/* :focus-visible, а не :focus — иначе кольцо вспыхивает при клике мышью,
+   и это читается как ошибка отрисовки. */
+button:focus-visible,
+a:focus-visible,
+input:focus-visible,
+textarea:focus-visible,
+select:focus-visible,
+[tabindex]:focus-visible {
+  outline: none;
+  box-shadow: var(--focus-ring);
+}
+
+/* Общее правило этапа. Точечные исключения — там, где движение несёт
+   информацию, а не украшает: подкраска свайпа и цвет счётчиков остаются. */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}

@@ -28,3 +28,26 @@ test('кольцо доезжает и до поля ввода', async ({ page 
   const shadow = await table.evaluate((el) => getComputedStyle(el).boxShadow);
   expect(shadow).toContain('rgba(66, 85, 255');
 });
+
+// Отрицательная проверка отложена из задачи 1: там на первом экране не было
+// элемента, который фокусируется, оставаясь на месте. Радиокнопка выбора
+// колонок подходит — она никуда не уводит и фокус у себя удерживает.
+//
+// Escape для этого не годится: нажатие клавиши переводит браузер в
+// клавиатурный режим, и кольцо после него показывается заслуженно.
+test('клик мышью кольцо не зажигает, а Tab зажигает', async ({ page }) => {
+  await page.goto('/');
+
+  const radio = page.getByRole('radio', { name: 'Иероглиф + перевод' });
+  await radio.click();
+
+  await expect(radio).toBeFocused();
+  expect(await radio.evaluate((el) => getComputedStyle(el).boxShadow)).toBe('none');
+
+  // Тот же элемент, дофокушенный с клавиатуры, кольцо получает.
+  await page.keyboard.press('Shift+Tab');
+  await page.keyboard.press('Tab');
+  expect(await radio.evaluate((el) => getComputedStyle(el).boxShadow)).toContain(
+    'rgba(66, 85, 255',
+  );
+});

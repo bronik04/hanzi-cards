@@ -39,14 +39,16 @@ test('переименование и удаление колоды', async ({ p
   await createDeckThroughUi(page, 'Юнит 1', SHORT_TABLE);
   await page.getByRole('button', { name: 'В библиотеку' }).click();
 
-  await page.getByRole('button', { name: /^переименовать/ }).click();
+  await page.getByRole('button', { name: 'Действия с колодой «Юнит 1»' }).click();
+  await page.getByRole('menuitem', { name: 'Переименовать' }).click();
   await page.getByLabel('Название колоды').fill('Переименованная');
   // exact: true — иначе имя совпадёт заодно с «Сохранить в файл» библиотеки:
   // без якоря на конец строки это тоже подстрока с «Сохранить».
   await page.getByRole('button', { name: 'Сохранить', exact: true }).click();
   await expect(page.getByRole('button', { name: /^Переименованная/ })).toBeVisible();
 
-  await page.getByRole('button', { name: /^удалить/ }).click();
+  await page.getByRole('button', { name: 'Действия с колодой «Переименованная»' }).click();
+  await page.getByRole('menuitem', { name: 'Удалить' }).click();
   await expect(page.getByText('Удалить вместе с прогрессом?')).toBeVisible();
   await page.getByRole('button', { name: /^Удалить/ }).click();
   await expect(page.getByText('Пока ни одной колоды', { exact: false })).toBeVisible();

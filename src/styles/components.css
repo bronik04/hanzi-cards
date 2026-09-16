@@ -195,80 +195,6 @@
   box-shadow: 0 8px 24px rgb(0 0 0 / 0.4);
 }
 
-.deck-row-wrap {
-  display: flex;
-  align-items: center;
-  gap: var(--gap);
-  background: var(--surface);
-  border: 1px solid transparent;
-  border-radius: var(--radius);
-  padding: 0 var(--gap) 0 0;
-}
-
-.deck-row-wrap:hover {
-  border-color: var(--accent);
-}
-
-.deck-row {
-  flex: 1;
-  min-width: 0;
-  display: flex;
-  align-items: center;
-  gap: var(--gap);
-  padding: 0.9rem var(--gap);
-  font: inherit;
-  color: inherit;
-  background: none;
-  border: none;
-  border-radius: var(--radius);
-  cursor: pointer;
-  text-align: left;
-}
-
-.deck-row__main {
-  flex: 1;
-  min-width: 0;
-  display: block;
-}
-
-.deck-row__name {
-  display: block;
-  font-size: 1.25rem;
-}
-
-.deck-row__meta {
-  display: block;
-  margin-top: 0.15rem;
-  color: var(--text-muted);
-  font-size: 0.9rem;
-}
-
-.deck-row__unfinished {
-  color: var(--accent);
-}
-
-.deck-row__actions {
-  display: flex;
-  gap: 0.75rem;
-  flex-shrink: 0;
-}
-
-.deck-row__actions .link-button {
-  font-size: 0.9rem;
-}
-
-.deck-row__confirm {
-  display: flex;
-  align-items: center;
-  gap: 0.75rem;
-  flex-shrink: 0;
-}
-
-.deck-row__confirm p {
-  margin: 0;
-  color: var(--no);
-}
-
 .visually-hidden {
   position: absolute;
   width: 1px;
@@ -340,6 +266,112 @@
 }
 
 .menu__item--danger:hover {
+  background: var(--no);
+  color: #2a0708;
+}
+
+.deck-card {
+  position: relative;
+  height: 100%;
+  min-height: 8.5rem;
+  display: flex;
+  align-items: flex-start;
+  background: var(--surface);
+  border: 1px solid transparent;
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-sm);
+}
+
+.deck-card:hover {
+  border-color: var(--accent);
+}
+
+.deck-card--editing {
+  flex-direction: column;
+  justify-content: center;
+  gap: var(--space-3);
+  padding: var(--space-4);
+}
+
+.deck-card__open {
+  flex: 1;
+  min-width: 0;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  padding: var(--space-4);
+  /* Место под кнопку меню: без него длинное название заезжает под «⋯». */
+  padding-right: 2.75rem;
+  font: inherit;
+  color: inherit;
+  background: none;
+  border: none;
+  border-radius: var(--radius-lg);
+  cursor: pointer;
+  text-align: left;
+}
+
+.deck-card__name {
+  font-weight: var(--weight-bold);
+  overflow-wrap: anywhere;
+}
+
+.deck-card__count {
+  font-size: 0.85rem;
+  color: var(--text-muted);
+}
+
+.deck-card__unfinished {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+  font-size: 0.8rem;
+  color: var(--accent);
+}
+
+.deck-card__unfinished::before {
+  content: '';
+  width: 0.4rem;
+  height: 0.4rem;
+  border-radius: var(--radius-pill);
+  background: var(--accent);
+}
+
+.deck-card__menu {
+  position: absolute;
+  top: var(--space-2);
+  right: var(--space-2);
+}
+
+.deck-card__rename-label {
+  display: block;
+  width: 100%;
+}
+
+.deck-card__rename {
+  width: 100%;
+  padding: var(--space-2) var(--space-3);
+  font: inherit;
+  color: var(--text);
+  background: var(--bg);
+  border: 1px solid var(--surface-raised);
+  border-radius: var(--radius-sm);
+}
+
+.deck-card__confirm {
+  margin: 0;
+  text-align: center;
+}
+
+.deck-card__buttons {
+  display: flex;
+  gap: var(--space-3);
+  align-items: center;
+  justify-content: center;
+}
+
+.btn--danger {
   background: var(--no);
   color: #2a0708;
 }

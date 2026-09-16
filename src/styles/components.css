@@ -235,7 +235,8 @@
   top: 2.2rem;
   right: 0;
   z-index: 2;
-  min-width: 11rem;
+  /* Хватает, чтобы «Выгрузить таблицей» не переносилось на две строки. */
+  min-width: 13rem;
   margin: 0;
   padding: var(--space-1) 0;
   list-style: none;
@@ -273,7 +274,7 @@
 .deck-card {
   position: relative;
   height: 100%;
-  min-height: 8.5rem;
+  min-height: 7rem;
   display: flex;
   align-items: flex-start;
   background: var(--surface);

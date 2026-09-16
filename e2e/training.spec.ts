@@ -22,7 +22,7 @@ test('режим колец проходится до экрана итогов'
   for (let done = 1; done < TOTAL; done += 1) {
     await know.click();
     // Ждём счётчик, а не таймер: так тест не зависит от длительности анимации.
-    await expect(page.getByTestId('count-known')).toHaveText(String(done));
+    await expect(page.getByTestId('count-known')).toHaveText(`✓ ${done}`);
   }
   await know.click();
 
@@ -70,7 +70,7 @@ test('смена блока не сдвигает кнопки', async ({ page }
   // Семь карточек первого блока — после последней начинается блок 2.
   for (let done = 1; done <= 7; done += 1) {
     await know.click();
-    await expect(page.getByTestId('count-known')).toHaveText(String(done));
+    await expect(page.getByTestId('count-known')).toHaveText(`✓ ${done}`);
   }
   await expect(page.getByTestId('stage-banner')).toHaveText('Блок 2 из 2');
 

@@ -122,6 +122,7 @@ export default function TrainingScreen() {
         >
           ×
         </button>
+        {session.mode === 'simple' && <SimpleProgress {...roundProgress(session)} />}
         <p className="training__progress">{progressText(session)}</p>
       </header>
 
@@ -137,11 +138,9 @@ export default function TrainingScreen() {
         </div>
       )}
 
-      {session.mode === 'simple' ? (
-        <SimpleProgress {...roundProgress(session)} />
-      ) : (
-        <RingProgress {...ringProgress(session)} />
-      )}
+      {/* Сегменты режима колец остаются отдельной строкой: их до восьми,
+          в строку шапки они не помещаются. */}
+      {session.mode === 'ring' && <RingProgress {...ringProgress(session)} />}
 
       <Counters known={stats.known} unknown={stats.unknown} />
 
@@ -166,10 +165,10 @@ export default function TrainingScreen() {
         <button type="button" className="btn btn--quiet" onClick={flip}>
           {flipped ? 'Скрыть ответ' : 'Показать ответ'}
         </button>
-        <button type="button" className="btn" onClick={() => commitSwipe('left')}>
+        <button type="button" className="btn btn--no" onClick={() => commitSwipe('left')}>
           Изучать снова
         </button>
-        <button type="button" className="btn" onClick={() => commitSwipe('right')}>
+        <button type="button" className="btn btn--yes" onClick={() => commitSwipe('right')}>
           Знаю
         </button>
       </div>

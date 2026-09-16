@@ -50,7 +50,16 @@
   align-items: center;
   justify-content: center;
   background: var(--surface);
+  position: relative;
+  overflow: hidden;
   border: 3px solid transparent;
+  /* Контур растёт вместе с подкраской. color-mix даёт цвет нужной
+     насыщенности из одной переменной, без второго слоя. */
+  border-color: color-mix(
+    in srgb,
+    var(--yes) calc(var(--tint-yes, 0) * 100%),
+    color-mix(in srgb, var(--no) calc(var(--tint-no, 0) * 100%), transparent)
+  );
   border-radius: var(--radius);
   cursor: pointer;
   touch-action: none;
@@ -64,14 +73,6 @@
 
 .card--exiting {
   transition: transform 220ms ease;
-}
-
-.card--yes {
-  border-color: var(--yes);
-}
-
-.card--no {
-  border-color: var(--no);
 }
 
 .card__body {
@@ -119,9 +120,9 @@
 }
 
 .progress {
-  width: var(--card-width);
+  flex: 1;
   height: 6px;
-  border-radius: 3px;
+  border-radius: var(--radius-pill);
   background: var(--surface);
   overflow: hidden;
 }
@@ -129,6 +130,7 @@
 .progress__fill {
   height: 100%;
   background: var(--accent);
+  border-radius: var(--radius-pill);
   transition: width 200ms ease;
 }
 
@@ -156,22 +158,6 @@
 .counters {
   display: flex;
   gap: var(--gap);
-}
-
-.counter {
-  min-width: 2.5rem;
-  padding: 0.25rem 0.75rem;
-  border-radius: 999px;
-  background: var(--surface);
-  font-variant-numeric: tabular-nums;
-}
-
-.counter--yes {
-  color: var(--yes);
-}
-
-.counter--no {
-  color: var(--no);
 }
 
 .warning {
@@ -478,4 +464,78 @@
 
 .mode-tile__preview i:nth-child(3) {
   height: 1.4rem;
+}
+
+.card__tint {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+}
+
+.card__tint--yes {
+  background: #3ccf9124;
+  opacity: var(--tint-yes, 0);
+}
+
+.card__tint--no {
+  background: #ff5a5f24;
+  opacity: var(--tint-no, 0);
+}
+
+.card__stamp {
+  position: absolute;
+  top: var(--space-4);
+  padding: 0.2rem 0.55rem;
+  border: 2.5px solid currentColor;
+  border-radius: var(--radius-sm);
+  font-size: 1rem;
+  font-weight: var(--weight-heavy);
+  letter-spacing: 0.08em;
+  pointer-events: none;
+}
+
+.card__stamp--yes {
+  right: var(--space-4);
+  color: var(--yes);
+  opacity: var(--tint-yes, 0);
+  transform: rotate(9deg);
+}
+
+.card__stamp--no {
+  left: var(--space-4);
+  color: var(--no);
+  opacity: var(--tint-no, 0);
+  transform: rotate(-9deg);
+}
+
+.counter {
+  min-width: 3rem;
+  padding: 0.25rem 0.75rem;
+  border-radius: var(--radius-pill);
+  font-weight: var(--weight-bold);
+  font-variant-numeric: tabular-nums;
+}
+
+.counter--yes {
+  background: #3ccf9126;
+  color: var(--yes);
+}
+
+.counter--no {
+  background: #ff5a5f26;
+  color: var(--no);
+}
+
+/* Приглушённая заливка, не сплошная: у проектора контраст хуже, чем у
+   монитора, и сплошной цвет на стене слепит. */
+.btn--yes {
+  background: #3ccf912e;
+  color: var(--yes);
+  border: 1.5px solid #3ccf916b;
+}
+
+.btn--no {
+  background: #ff5a5f2e;
+  color: var(--no);
+  border: 1.5px solid #ff5a5f6b;
 }

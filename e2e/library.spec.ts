@@ -7,7 +7,7 @@ test('две колоды не мешают тренировкам друг др
   await createDeckThroughUi(page, 'Юнит 1', TABLE);
   await page.getByRole('button', { name: /^Просмотр/ }).click();
   await page.getByRole('button', { name: 'Знаю' }).click();
-  await expect(page.getByTestId('count-known')).toHaveText('1');
+  await expect(page.getByTestId('count-known')).toHaveText('✓ 1');
 
   // «Закрыть тренировку» → «Выйти» — это явный отказ от сессии (см.
   // TrainingScreen: предупреждение «Прогресс тренировки будет потерян» не
@@ -31,7 +31,7 @@ test('две колоды не мешают тренировкам друг др
   // И действительно продолжает с того же места.
   await page.getByRole('button', { name: /^Юнит 1/ }).click();
   await page.getByRole('button', { name: 'Продолжить' }).click();
-  await expect(page.getByTestId('count-known')).toHaveText('1');
+  await expect(page.getByTestId('count-known')).toHaveText('✓ 1');
 });
 
 test('переименование и удаление колоды', async ({ page }) => {

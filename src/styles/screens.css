@@ -1,28 +1,28 @@
 .import__textarea {
   width: min(90vw, 48rem);
   min-height: 12rem;
-  padding: var(--gap);
+  padding: var(--space-4);
   font: inherit;
   color: var(--text);
   background: var(--surface);
   border: 1px solid var(--surface-raised);
-  border-radius: var(--radius);
+  border-radius: var(--radius-lg);
   resize: vertical;
 }
 
 .import__columns {
   display: flex;
   flex-wrap: wrap;
-  gap: var(--gap);
+  gap: var(--space-4);
   border: 1px solid var(--surface-raised);
-  border-radius: var(--radius);
-  padding: 0.75rem var(--gap);
+  border-radius: var(--radius-lg);
+  padding: var(--space-3) var(--space-4);
 }
 
 .import__columns label {
   display: flex;
   align-items: center;
-  gap: 0.35rem;
+  gap: var(--space-1);
   cursor: pointer;
 }
 
@@ -34,14 +34,14 @@
 
 .import__preview th,
 .import__preview td {
-  padding: 0.4rem 0.6rem;
+  padding: var(--space-1) var(--space-3);
   border-bottom: 1px solid var(--surface-raised);
   text-align: left;
 }
 
 .import__preview th {
   color: var(--text-muted);
-  font-weight: 500;
+  font-weight: var(--weight-semibold);
 }
 
 .import__more,
@@ -111,7 +111,7 @@
 .training__buttons {
   display: flex;
   flex-wrap: wrap;
-  gap: var(--gap);
+  gap: var(--space-3);
   justify-content: center;
 }
 
@@ -120,8 +120,8 @@
   flex-wrap: wrap;
   align-items: center;
   gap: var(--gap);
-  padding: 0.75rem var(--gap);
-  border-radius: var(--radius);
+  padding: var(--space-3) var(--space-4);
+  border-radius: var(--radius-lg);
   background: var(--surface-raised);
 }
 
@@ -139,7 +139,7 @@
 .done__buttons {
   display: flex;
   flex-wrap: wrap;
-  gap: var(--gap);
+  gap: var(--space-3);
   justify-content: center;
 }
 
@@ -161,7 +161,7 @@
 .library__bar {
   display: flex;
   flex-wrap: wrap;
-  gap: 0.75rem;
+  gap: var(--space-3);
   justify-content: center;
 }
 
@@ -196,7 +196,7 @@
 .mode__links {
   display: flex;
   flex-wrap: wrap;
-  gap: var(--gap);
+  gap: var(--space-3);
   justify-content: center;
 }
 
@@ -204,7 +204,7 @@
   width: min(90vw, 48rem);
   display: flex;
   flex-direction: column;
-  gap: 0.35rem;
+  gap: var(--space-1);
   text-align: left;
 }
 
@@ -215,9 +215,9 @@
 
 .import__name input {
   font: inherit;
-  padding: 0.6rem var(--gap);
+  padding: var(--space-2) var(--space-4);
   color: var(--text);
   background: var(--surface);
   border: 1px solid var(--surface-raised);
-  border-radius: var(--radius);
+  border-radius: var(--radius-lg);
 }

@@ -5,7 +5,7 @@ test('две колоды не мешают тренировкам друг др
   await page.goto('/');
 
   await createDeckThroughUi(page, 'Юнит 1', TABLE);
-  await page.getByRole('button', { name: 'Простой просмотр' }).click();
+  await page.getByRole('button', { name: /^Просмотр/ }).click();
   await page.getByRole('button', { name: 'Знаю' }).click();
   await expect(page.getByTestId('count-known')).toHaveText('1');
 

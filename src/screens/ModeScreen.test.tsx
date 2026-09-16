@@ -54,8 +54,8 @@ describe('ModeScreen', () => {
 
   it('предлагает оба режима тренировки', () => {
     renderWithProvider(<ModeScreen />, stateWith());
-    expect(screen.getByRole('button', { name: 'Простой просмотр' })).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: 'Заучивание кольцами по 7' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /^Просмотр/ })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /^Кольца по 7/ })).toBeInTheDocument();
   });
 
   it('даёт ссылку на загрузку новой таблицы', () => {

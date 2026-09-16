@@ -27,7 +27,7 @@ test('сохранённая колода и прогресс переживаю
 
   await page.getByLabel('Таблица со словами').fill(SHORT_TABLE);
   await page.getByRole('button', { name: 'Создать колоду' }).click();
-  await page.getByRole('button', { name: 'Простой просмотр' }).click();
+  await page.getByRole('button', { name: /^Просмотр/ }).click();
   await page.getByRole('button', { name: 'Знаю' }).click();
   await expect(page.getByTestId('count-known')).toHaveText('1');
 

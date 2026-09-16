@@ -127,7 +127,7 @@ describe('App: полный цикл', () => {
     render(<App storage={storage} />);
 
     await importDeck(user);
-    await user.click(screen.getByRole('button', { name: 'Простой просмотр' }));
+    await user.click(screen.getByRole('button', { name: /^Просмотр/ }));
 
     await user.click(screen.getByRole('button', { name: 'Знаю' }));
     await screen.findByText('谢谢');
@@ -143,7 +143,7 @@ describe('App: полный цикл', () => {
     render(<App storage={storage} />);
 
     await importDeck(user);
-    await user.click(screen.getByRole('button', { name: 'Простой просмотр' }));
+    await user.click(screen.getByRole('button', { name: /^Просмотр/ }));
     await user.click(screen.getByRole('button', { name: 'Знаю' }));
     await screen.findByText('谢谢');
 
@@ -165,7 +165,7 @@ describe('App: полный цикл', () => {
     render(<App storage={storage} />);
 
     await importDeck(user);
-    await user.click(screen.getByRole('button', { name: 'Простой просмотр' }));
+    await user.click(screen.getByRole('button', { name: /^Просмотр/ }));
     await user.click(screen.getByRole('button', { name: 'Знаю' }));
     await screen.findByText('谢谢');
 
@@ -234,7 +234,7 @@ describe('App: полный цикл', () => {
 
     await importDeck(user);
     await user.click(screen.getByLabelText('Перевод → иероглиф'));
-    await user.click(screen.getByRole('button', { name: 'Простой просмотр' }));
+    await user.click(screen.getByRole('button', { name: /^Просмотр/ }));
 
     expect(screen.getByText('привет')).toBeInTheDocument();
   });

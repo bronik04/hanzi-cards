@@ -376,3 +376,106 @@
   background: var(--no);
   color: #2a0708;
 }
+
+.chip {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.35rem 0.85rem;
+  border: 1.5px solid var(--surface-raised);
+  border-radius: var(--radius-pill);
+  color: var(--text-muted);
+  font-size: 0.9rem;
+  cursor: pointer;
+}
+
+/* Сам переключатель не показываем, но оставляем в потоке: он несёт роль,
+   имя и состояние для читалки, и по нему же ходят стрелки внутри группы. */
+.chip input {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  margin: -1px;
+  padding: 0;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
+.chip:has(input:checked) {
+  border-color: var(--accent);
+  background: #4255ff26;
+  color: var(--text);
+  font-weight: var(--weight-semibold);
+}
+
+.chip:has(input:disabled) {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+/* Кольцо фокуса рисует сам чип: визуально скрытый input показать негде. */
+.chip:has(input:focus-visible) {
+  box-shadow: var(--focus-ring);
+}
+
+.mode-tile {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  min-height: 9rem;
+  padding: var(--space-4);
+  border: none;
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-md);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.mode-tile--simple {
+  background: var(--mode-simple);
+  color: #fff;
+}
+
+.mode-tile--ring {
+  background: var(--mode-ring);
+  color: var(--mode-ring-text);
+}
+
+.mode-tile__name {
+  font-size: 1.05rem;
+  font-weight: var(--weight-bold);
+}
+
+.mode-tile__hint {
+  font-size: 0.82rem;
+  opacity: 0.85;
+}
+
+.mode-tile__preview {
+  display: flex;
+  gap: var(--space-1);
+  align-items: flex-end;
+  height: 2.4rem;
+  margin-top: auto;
+}
+
+.mode-tile__preview i {
+  width: 1.5rem;
+  border-radius: var(--radius-sm);
+  background: currentColor;
+  opacity: 0.25;
+}
+
+.mode-tile__preview i:nth-child(1) {
+  height: 1.9rem;
+}
+
+.mode-tile__preview i:nth-child(2) {
+  height: 2.4rem;
+  opacity: 0.4;
+}
+
+.mode-tile__preview i:nth-child(3) {
+  height: 1.4rem;
+}

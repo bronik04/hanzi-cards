@@ -52,37 +52,31 @@
 
 .mode__directions {
   display: flex;
-  flex-direction: column;
-  gap: 0.5rem;
-  align-items: flex-start;
-  border: 1px solid var(--surface-raised);
-  border-radius: var(--radius);
-  padding: 0.75rem var(--gap);
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  justify-content: center;
+  margin: 0;
+  padding: 0;
+  border: none;
 }
 
-.mode__directions label {
-  display: flex;
-  align-items: center;
-  gap: 0.35rem;
-  cursor: pointer;
+.mode__tiles {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--space-3);
+  width: min(90vw, 28rem);
 }
 
-.mode__directions label:has(input:disabled) {
-  color: var(--text-muted);
-  cursor: not-allowed;
+@media (max-width: 40rem) {
+  .mode__tiles {
+    grid-template-columns: 1fr;
+  }
 }
 
 .mode__hint {
   margin: 0;
   font-size: 0.9rem;
   color: var(--text-muted);
-}
-
-.mode__buttons {
-  display: flex;
-  flex-wrap: wrap;
-  gap: var(--gap);
-  justify-content: center;
 }
 
 .screen--training {

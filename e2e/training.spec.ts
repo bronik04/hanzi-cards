@@ -15,7 +15,7 @@ test('режим колец проходится до экрана итогов'
   await page.getByRole('button', { name: 'Создать колоду' }).click();
   await expect(page.getByRole('heading', { name: 'Колода готова: 8 карточек' })).toBeVisible();
 
-  await page.getByRole('button', { name: 'Заучивание кольцами по 7' }).click();
+  await page.getByRole('button', { name: /^Кольца по 7/ }).click();
   await expect(page.getByText('Блок 1 из 2 · осталось 7')).toBeVisible();
 
   const know = page.getByRole('button', { name: 'Знаю' });
@@ -57,7 +57,7 @@ test('смена блока не сдвигает кнопки', async ({ page }
   await page.goto('/');
   await page.getByLabel('Таблица со словами').fill(TABLE);
   await page.getByRole('button', { name: 'Создать колоду' }).click();
-  await page.getByRole('button', { name: 'Заучивание кольцами по 7' }).click();
+  await page.getByRole('button', { name: /^Кольца по 7/ }).click();
   await expect(page.getByText('Блок 1 из 2 · осталось 7')).toBeVisible();
 
   const know = page.getByRole('button', { name: 'Знаю' });

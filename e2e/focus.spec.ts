@@ -51,3 +51,12 @@ test('клик мышью кольцо не зажигает, а Tab зажиг�
     'rgba(66, 85, 255',
   );
 });
+
+test('после перехода фокус на заголовке нового экрана', async ({ page }) => {
+  await page.goto('/');
+  await page.getByRole('button', { name: 'В библиотеку' }).click();
+
+  await expect(page.getByRole('heading', { name: 'Мои колоды' })).toBeVisible();
+  const focused = await page.evaluate(() => document.activeElement?.tagName ?? '');
+  expect(focused).toBe('H1');
+});

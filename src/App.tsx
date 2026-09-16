@@ -1,3 +1,4 @@
+import ScreenTransition from '@/components/ScreenTransition';
 import UpdatePrompt from '@/components/UpdatePrompt';
 import type { StorageLike } from '@/core/storage';
 import { browserStorage, usePersistence } from '@/hooks/usePersistence';
@@ -37,7 +38,7 @@ function Screens({ storage }: { storage: StorageLike | null }) {
           {warning}
         </p>
       )}
-      {renderScreen(state.screen)}
+      <ScreenTransition screen={state.screen}>{renderScreen(state.screen)}</ScreenTransition>
     </>
   );
 }

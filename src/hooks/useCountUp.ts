@@ -7,13 +7,13 @@ import { useReducedMotion } from '@/hooks/useReducedMotion';
  */
 export function useCountUp(target: number, durationMs: number): number {
   const reduced = useReducedMotion();
-  const [value, setValue] = useState(reduced ? target : 0);
+  const instant = reduced || durationMs <= 0;
+  const [value, setValue] = useState(0);
 
   useEffect(() => {
-    if (reduced || durationMs <= 0) {
-      setValue(target);
-      return;
-    }
+    // Мгновенный случай ничего не ставит в состояние: значение отдаётся
+    // ниже напрямую. Синхронный setState в эффекте вызвал бы лишний рендер.
+    if (instant) return undefined;
 
     let frame = 0;
     const started = performance.now();
@@ -29,7 +29,7 @@ export function useCountUp(target: number, durationMs: number): number {
 
     frame = requestAnimationFrame(step);
     return () => cancelAnimationFrame(frame);
-  }, [target, durationMs, reduced]);
+  }, [target, durationMs, instant]);
 
-  return value;
+  return instant ? target : value;
 }

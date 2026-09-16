@@ -61,6 +61,7 @@
     color-mix(in srgb, var(--no) calc(var(--tint-no, 0) * 100%), transparent)
   );
   border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-md);
   cursor: pointer;
   touch-action: none;
   user-select: none;
@@ -143,7 +144,7 @@
 .segment {
   flex: 1;
   height: 6px;
-  border-radius: 3px;
+  border-radius: var(--radius-pill);
   background: var(--surface);
 }
 
@@ -178,7 +179,7 @@
   padding: 0.75rem var(--gap);
   border-radius: var(--radius-lg);
   background: var(--surface-raised);
-  box-shadow: 0 8px 24px rgb(0 0 0 / 0.4);
+  box-shadow: var(--shadow-md);
 }
 
 .visually-hidden {
@@ -395,7 +396,10 @@
 }
 
 .chip:has(input:disabled) {
-  opacity: 0.45;
+  /* Не opacity: на проекторе контраст и так хуже, а 45% уводят подпись
+     почти в фон. Приглушаем цветом, оставляя текст читаемым. */
+  border-color: var(--surface);
+  color: var(--text-muted);
   cursor: not-allowed;
 }
 

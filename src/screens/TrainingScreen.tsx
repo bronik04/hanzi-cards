@@ -15,7 +15,7 @@ import { useActiveDeck, useAppDispatch } from '@/state/AppContext';
  *  рендер сбрасывал бы useMemo с картой карточек. */
 const NO_CARDS: readonly CardType[] = [];
 
-/** Совпадает с длительностью перехода .card в app.css. */
+/** Совпадает с длительностью перехода .card в components.css. */
 export const EXIT_DURATION = 220;
 const BANNER_DURATION = 1800;
 
@@ -113,6 +113,9 @@ export default function TrainingScreen() {
 
   return (
     <section className="screen screen--training">
+      {/* Заголовок скрыт визуально, но нужен: на него уходит фокус после
+          перехода, и без него читалка не объявляет, куда попал человек. */}
+      <h1 className="visually-hidden">Тренировка</h1>
       <header className="training__header">
         <button
           type="button"

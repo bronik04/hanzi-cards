@@ -135,6 +135,8 @@ describe('DeckCard, переименование', () => {
     await user.type(screen.getByLabelText('Название колоды'), 'Юнит 3{Enter}');
 
     expect(onRename).toHaveBeenCalledWith('Юнит 3');
+    // Редактор обязан закрыться: иначе карточка застревает в режиме правки.
+    expect(screen.queryByLabelText('Название колоды')).not.toBeInTheDocument();
   });
 
   it('Escape отменяет ввод и восстанавливает исходное имя', async () => {
@@ -154,6 +156,8 @@ describe('DeckCard, переименование', () => {
     await user.keyboard('{Enter}');
 
     expect(onRename).not.toHaveBeenCalled();
+    // И остаться открытым: закрыться, выбросив ввод, было бы хуже отказа.
+    expect(screen.getByLabelText('Название колоды')).toBeInTheDocument();
   });
 
   it('«Сохранить» отключена, пока поле пустое', async () => {

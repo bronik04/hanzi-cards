@@ -1,4 +1,4 @@
-import { render, screen } from '@testing-library/react';
+import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import App from '@/App';
 import { STORAGE_KEY, STORAGE_VERSION } from '@/core/storage';
@@ -134,9 +134,12 @@ describe('App: полный цикл', () => {
     await user.click(screen.getByRole('button', { name: 'Знаю' }));
 
     expect(await screen.findByRole('heading', { name: 'Готово' })).toBeInTheDocument();
-    expect(screen.getByTestId('count-known')).toHaveTextContent('2');
-    expect(screen.getByTestId('count-unknown')).toHaveTextContent('0');
     expect(screen.getByRole('img', { name: 'Верных ответов: 100%' })).toBeInTheDocument();
+    // Счётчики на итогах набегают, поэтому ждём конечное значение.
+    await waitFor(() => expect(screen.getByTestId('count-known')).toHaveTextContent('2'), {
+      timeout: 3000,
+    });
+    expect(screen.getByTestId('count-unknown')).toHaveTextContent('0');
   });
 
   it('отмена импорта не трогает начатую тренировку', async () => {

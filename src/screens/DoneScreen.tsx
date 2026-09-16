@@ -1,11 +1,19 @@
 import Counters from '@/components/Counters';
 import ResultRing from '@/components/ResultRing';
 import { cardsCount } from '@/core/plural';
+import { useCountUp } from '@/hooks/useCountUp';
 import { useActiveDeck, useAppDispatch } from '@/state/AppContext';
+
+const COUNT_UP_MS = 1400;
 
 export default function DoneScreen() {
   const deck = useActiveDeck();
   const dispatch = useAppDispatch();
+  // Хуки до раннего возврата: порядок вызова обязан быть постоянным.
+  // Счётчики набегают вместе с кольцом — сам Counters остаётся простым,
+  // иначе он начал бы набегать и на экране тренировки после каждого свайпа.
+  const known = useCountUp(deck?.stats.known ?? 0, COUNT_UP_MS);
+  const unknown = useCountUp(deck?.stats.unknown ?? 0, COUNT_UP_MS);
   if (deck === null) return null;
   const { cards, stats, startedMode } = deck;
 
@@ -15,7 +23,7 @@ export default function DoneScreen() {
       <p className="done__info">{cardsCount(cards.length)}</p>
 
       <ResultRing percent={percentKnown(stats)} />
-      <Counters known={stats.known} unknown={stats.unknown} />
+      <Counters known={known} unknown={unknown} />
 
       <div className="done__buttons">
         <button

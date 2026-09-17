@@ -1,4 +1,5 @@
 import { DIRECTIONS, DIRECTION_LABELS, hasPinyin } from '@/core/deck';
+import ModeTile from '@/components/ModeTile';
 import { cardsCount } from '@/core/plural';
 import { useActiveDeck, useAppDispatch } from '@/state/AppContext';
 
@@ -16,11 +17,11 @@ export default function ModeScreen() {
       </h1>
 
       <fieldset className="mode__directions">
-        <legend>Что спрашиваем</legend>
+        <legend className="visually-hidden">Что спрашиваем</legend>
         {DIRECTIONS.map((value) => {
           const disabled = value === 'hanzi-to-pinyin' && !pinyinAvailable;
           return (
-            <label key={value}>
+            <label key={value} className="chip">
               <input
                 type="radio"
                 name="direction"
@@ -29,28 +30,28 @@ export default function ModeScreen() {
                 disabled={disabled}
                 onChange={() => dispatch({ type: 'direction-changed', direction: value })}
               />
-              {DIRECTION_LABELS[value]}
+              <span>{DIRECTION_LABELS[value]}</span>
             </label>
           );
         })}
-        {!pinyinAvailable && <p className="mode__hint">В колоде нет пиньиня</p>}
       </fieldset>
+      {/* Вынесено за рамку: внутри подпись читалась как часть группы
+          переключателей, снаружи она поясняет, почему один чип недоступен. */}
+      {!pinyinAvailable && <p className="mode__hint">В колоде нет пиньиня</p>}
 
-      <div className="mode__buttons">
-        <button
-          type="button"
-          className="btn"
-          onClick={() => dispatch({ type: 'session-started', mode: 'simple' })}
-        >
-          Простой просмотр
-        </button>
-        <button
-          type="button"
-          className="btn"
-          onClick={() => dispatch({ type: 'session-started', mode: 'ring' })}
-        >
-          Заучивание кольцами по 7
-        </button>
+      <div className="mode__tiles">
+        <ModeTile
+          mode="simple"
+          name="Просмотр"
+          hint="Один круг, без повторов"
+          onStart={() => dispatch({ type: 'session-started', mode: 'simple' })}
+        />
+        <ModeTile
+          mode="ring"
+          name="Кольца по 7"
+          hint="Блоками, до полного круга"
+          onStart={() => dispatch({ type: 'session-started', mode: 'ring' })}
+        />
       </div>
 
       <div className="mode__links">

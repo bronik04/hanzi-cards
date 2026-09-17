@@ -27,9 +27,9 @@ test('сохранённая колода и прогресс переживаю
 
   await page.getByLabel('Таблица со словами').fill(SHORT_TABLE);
   await page.getByRole('button', { name: 'Создать колоду' }).click();
-  await page.getByRole('button', { name: 'Простой просмотр' }).click();
+  await page.getByRole('button', { name: /^Просмотр/ }).click();
   await page.getByRole('button', { name: 'Знаю' }).click();
-  await expect(page.getByTestId('count-known')).toHaveText('1');
+  await expect(page.getByTestId('count-known')).toHaveText('✓ 1');
 
   await context.setOffline(true);
   await page.reload();
@@ -41,6 +41,6 @@ test('сохранённая колода и прогресс переживаю
   await page.getByRole('button', { name: /карточк/ }).click();
   await expect(page.getByRole('heading', { name: 'Продолжить тренировку?' })).toBeVisible();
   await page.getByRole('button', { name: 'Продолжить' }).click();
-  await expect(page.getByTestId('count-known')).toHaveText('1');
+  await expect(page.getByTestId('count-known')).toHaveText('✓ 1');
   await expect(page.getByText('谢谢')).toBeVisible();
 });

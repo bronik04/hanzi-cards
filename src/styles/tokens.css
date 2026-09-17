@@ -10,8 +10,38 @@
   --yes: #3ccf91;
   --no: #ff5a5f;
 
-  --radius: 16px;
-  --gap: 1rem;
+  /* Цвета режимов тренировки. На Этапе 2b их станет шесть, поэтому они
+     заведены шкалой, а не по месту. */
+  --mode-simple: var(--accent);
+  --mode-ring: #f0b429;
+  /* Белый по жёлтому не проходит по контрасту. */
+  --mode-ring-text: #26210a;
+
+  --radius-sm: 8px;
+  --radius-md: 12px;
+  --radius-lg: 16px;
+  --radius-pill: 999px;
+
+  --shadow-sm: 0 4px 14px rgb(0 0 0 / 0.25);
+  --shadow-md: 0 8px 22px rgb(0 0 0 / 0.35);
+  --shadow-lg: 0 12px 32px rgb(0 0 0 / 0.45);
+
+  --space-1: 0.25rem;
+  --space-2: 0.5rem;
+  --space-3: 0.75rem;
+  --space-4: 1rem;
+  --space-5: 1.5rem;
+  --space-6: 2rem;
+  --gap: var(--space-4);
+
+  --weight-regular: 400;
+  --weight-semibold: 600;
+  --weight-bold: 700;
+  --weight-heavy: 800;
+
+  /* Без этого приложение проходится с клавиатуры вслепую: правил :focus в
+     проекте до Этапа 2a не было ни одного. */
+  --focus-ring: 0 0 0 3px #4255ff80;
 
   --font-ui: system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
   /* Только системные шрифты: веб-шрифт для CJK весит мегабайты и сломает офлайн. */
@@ -24,15 +54,4 @@
 
   --card-width: min(90vw, 60rem);
   --card-height: min(60vh, 34rem);
-}
-
-* {
-  box-sizing: border-box;
-}
-
-body {
-  margin: 0;
-  background: var(--bg);
-  color: var(--text);
-  font-family: var(--font-ui);
 }

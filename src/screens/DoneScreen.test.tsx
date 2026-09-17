@@ -1,4 +1,4 @@
-import { screen } from '@testing-library/react';
+import { screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import DoneScreen from '@/screens/DoneScreen';
 import LibraryScreen from '@/screens/LibraryScreen';
@@ -34,11 +34,17 @@ function DoneOrLibrary() {
 }
 
 describe('DoneScreen', () => {
-  it('показывает размер колоды и счётчики', () => {
+  it('показывает размер колоды и счётчики', async () => {
     renderWithProvider(<DoneScreen />, stateWith());
     expect(screen.getByRole('heading', { name: 'Готово' })).toBeInTheDocument();
     expect(screen.getByText('2 карточки')).toBeInTheDocument();
-    expect(screen.getByText('Знаю: 1 · Не знаю: 1')).toBeInTheDocument();
+    // Имя кольца — итог, оно готово сразу. Числа набегают, поэтому их ждём:
+    // проверка заодно доказывает, что набегание доходит до конца.
+    expect(screen.getByRole('img', { name: 'Верных ответов: 50%' })).toBeInTheDocument();
+    await waitFor(() => expect(screen.getByTestId('count-known')).toHaveTextContent('1'), {
+      timeout: 3000,
+    });
+    expect(screen.getByTestId('count-unknown')).toHaveTextContent('1');
   });
 
   it('«В библиотеку» ведёт в библиотеку', async () => {

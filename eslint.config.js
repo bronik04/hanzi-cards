@@ -12,6 +12,9 @@ export default tseslint.config(
       'coverage',
       'playwright-report',
       'test-results',
+      // Рабочие копии агентов держат внутри собственный dist: без этого
+      // линтер уходит в чужую сборку и валится на её минифицированном коде.
+      '.claude/worktrees',
     ],
   },
   js.configs.recommended,

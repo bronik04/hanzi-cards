@@ -1,6 +1,6 @@
 import { useRef, useState } from 'react';
 import type { ChangeEvent } from 'react';
-import DeckRow from '@/components/DeckRow';
+import DeckCard from '@/components/DeckCard';
 import { byRecent } from '@/core/library';
 import {
   deckFileName,
@@ -85,10 +85,10 @@ export default function LibraryScreen() {
             Пока ни одной колоды. Добавьте первую — вставьте таблицу со словами.
           </p>
         ) : (
-          <ul className="library__list">
+          <ul className="library__grid">
             {byRecent(decks).map((deck) => (
               <li key={deck.id}>
-                <DeckRow
+                <DeckCard
                   deck={deck}
                   onOpen={() => dispatch({ type: 'deck-opened', id: deck.id, now: new Date() })}
                   onRename={(name) => dispatch({ type: 'deck-renamed', id: deck.id, name })}

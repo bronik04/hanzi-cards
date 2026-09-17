@@ -15,19 +15,21 @@ test('режим колец проходится до экрана итогов'
   await page.getByRole('button', { name: 'Создать колоду' }).click();
   await expect(page.getByRole('heading', { name: 'Колода готова: 8 карточек' })).toBeVisible();
 
-  await page.getByRole('button', { name: 'Заучивание кольцами по 7' }).click();
+  await page.getByRole('button', { name: /^Кольца по 7/ }).click();
   await expect(page.getByText('Блок 1 из 2 · осталось 7')).toBeVisible();
 
   const know = page.getByRole('button', { name: 'Знаю' });
   for (let done = 1; done < TOTAL; done += 1) {
     await know.click();
     // Ждём счётчик, а не таймер: так тест не зависит от длительности анимации.
-    await expect(page.getByTestId('count-known')).toHaveText(String(done));
+    await expect(page.getByTestId('count-known')).toHaveText(`✓ ${done}`);
   }
   await know.click();
 
   await expect(page.getByRole('heading', { name: 'Готово' })).toBeVisible();
-  await expect(page.getByText('Знаю: 16 · Не знаю: 0')).toBeVisible();
+  await expect(page.getByRole('img', { name: 'Верных ответов: 100%' })).toBeVisible();
+  await expect(page.getByTestId('count-known')).toHaveText('✓ 16');
+  await expect(page.getByTestId('count-unknown')).toHaveText('✕ 0');
 });
 
 /** Текст баннера и геометрия — одним чтением страницы. Баннер живёт 1800 мс, и
@@ -57,7 +59,7 @@ test('смена блока не сдвигает кнопки', async ({ page }
   await page.goto('/');
   await page.getByLabel('Таблица со словами').fill(TABLE);
   await page.getByRole('button', { name: 'Создать колоду' }).click();
-  await page.getByRole('button', { name: 'Заучивание кольцами по 7' }).click();
+  await page.getByRole('button', { name: /^Кольца по 7/ }).click();
   await expect(page.getByText('Блок 1 из 2 · осталось 7')).toBeVisible();
 
   const know = page.getByRole('button', { name: 'Знаю' });
@@ -70,7 +72,7 @@ test('смена блока не сдвигает кнопки', async ({ page }
   // Семь карточек первого блока — после последней начинается блок 2.
   for (let done = 1; done <= 7; done += 1) {
     await know.click();
-    await expect(page.getByTestId('count-known')).toHaveText(String(done));
+    await expect(page.getByTestId('count-known')).toHaveText(`✓ ${done}`);
   }
   await expect(page.getByTestId('stage-banner')).toHaveText('Блок 2 из 2');
 

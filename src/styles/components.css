@@ -1,0 +1,608 @@
+.screen {
+  min-height: 100dvh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: var(--gap);
+  padding: var(--gap);
+  text-align: center;
+}
+
+.btn {
+  font: inherit;
+  font-size: 1.125rem;
+  padding: 0.75rem 1.5rem;
+  border: none;
+  border-radius: var(--radius-lg);
+  background: var(--accent);
+  color: var(--text);
+  cursor: pointer;
+}
+
+.btn:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+.btn--quiet {
+  background: var(--surface-raised);
+}
+
+.link-button {
+  font: inherit;
+  background: none;
+  border: none;
+  color: var(--text-muted);
+  text-decoration: underline;
+  cursor: pointer;
+}
+
+.link-button:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+.card {
+  width: var(--card-width);
+  height: var(--card-height);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--surface);
+  position: relative;
+  overflow: hidden;
+  border: 3px solid transparent;
+  /* Контур растёт вместе с подкраской. color-mix даёт цвет нужной
+     насыщенности из одной переменной, без второго слоя. */
+  border-color: color-mix(
+    in srgb,
+    var(--yes) calc(var(--tint-yes, 0) * 100%),
+    color-mix(in srgb, var(--no) calc(var(--tint-no, 0) * 100%), transparent)
+  );
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-md);
+  cursor: pointer;
+  touch-action: none;
+  user-select: none;
+  transition: transform 220ms ease, border-color 120ms ease;
+}
+
+.card--dragging {
+  transition: border-color 120ms ease;
+}
+
+.card--exiting {
+  transition: transform 220ms ease;
+}
+
+.card__body {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.5rem;
+  padding: var(--gap);
+}
+
+.card__main {
+  margin: 0;
+  font-size: var(--size-translation);
+}
+
+.card__main--hanzi {
+  font-family: var(--font-hanzi);
+  font-size: var(--size-hanzi);
+  line-height: 1.1;
+}
+
+.card__secondary {
+  margin: 0;
+  font-size: var(--size-pinyin);
+  color: var(--text-muted);
+}
+
+.card__tertiary {
+  margin: 0;
+  font-size: var(--size-tertiary);
+  color: var(--text-muted);
+}
+
+.icon-btn {
+  font: inherit;
+  font-size: 1.5rem;
+  line-height: 1;
+  width: 2.25rem;
+  height: 2.25rem;
+  border: none;
+  border-radius: 50%;
+  background: var(--surface-raised);
+  color: var(--text);
+  cursor: pointer;
+}
+
+.progress {
+  flex: 1;
+  height: 6px;
+  border-radius: var(--radius-pill);
+  background: var(--surface);
+  overflow: hidden;
+}
+
+.progress__fill {
+  height: 100%;
+  background: var(--accent);
+  border-radius: var(--radius-pill);
+  transition: width 200ms ease;
+}
+
+.segments {
+  display: flex;
+  gap: 4px;
+  width: var(--card-width);
+}
+
+.segment {
+  flex: 1;
+  height: 6px;
+  border-radius: var(--radius-pill);
+  background: var(--surface);
+}
+
+.segment--done {
+  background: var(--yes);
+}
+
+.segment--active {
+  background: var(--accent);
+}
+
+.counters {
+  display: flex;
+  gap: var(--gap);
+}
+
+.warning {
+  margin: 0;
+  padding: 0.5rem var(--gap);
+  background: var(--no);
+  color: var(--bg);
+  text-align: center;
+}
+
+.update-prompt {
+  position: fixed;
+  inset: auto 1rem 1rem auto;
+  z-index: 10;
+  display: flex;
+  align-items: center;
+  gap: var(--gap);
+  padding: 0.75rem var(--gap);
+  border-radius: var(--radius-lg);
+  background: var(--surface-raised);
+  box-shadow: var(--shadow-md);
+}
+
+.visually-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  margin: -1px;
+  padding: 0;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
+.menu {
+  position: relative;
+  flex: none;
+}
+
+.menu__button {
+  width: 2rem;
+  height: 2rem;
+  border: none;
+  border-radius: var(--radius-pill);
+  background: none;
+  color: var(--text-muted);
+  font: inherit;
+  font-size: 1.1rem;
+  line-height: 1;
+  letter-spacing: 0.06em;
+  cursor: pointer;
+}
+
+.menu__button:hover {
+  background: var(--surface-raised);
+  color: var(--text);
+}
+
+.menu__list {
+  position: absolute;
+  top: 2.2rem;
+  right: 0;
+  z-index: 2;
+  /* Хватает, чтобы «Выгрузить таблицей» не переносилось на две строки. */
+  min-width: 13rem;
+  margin: 0;
+  padding: var(--space-1) 0;
+  list-style: none;
+  background: var(--surface-raised);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-lg);
+}
+
+.menu__item {
+  display: block;
+  width: 100%;
+  padding: var(--space-2) var(--space-4);
+  border: none;
+  background: none;
+  color: var(--text);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.menu__item:hover {
+  background: var(--accent);
+  color: #fff;
+}
+
+.menu__item--danger {
+  color: var(--no);
+}
+
+.menu__item--danger:hover {
+  background: var(--no);
+  color: #2a0708;
+}
+
+.deck-card {
+  position: relative;
+  height: 100%;
+  min-height: 7rem;
+  display: flex;
+  align-items: flex-start;
+  background: var(--surface);
+  border: 1px solid transparent;
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-sm);
+}
+
+.deck-card:hover {
+  border-color: var(--accent);
+}
+
+.deck-card--editing {
+  flex-direction: column;
+  justify-content: center;
+  gap: var(--space-3);
+  padding: var(--space-4);
+}
+
+.deck-card__open {
+  flex: 1;
+  min-width: 0;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  padding: var(--space-4);
+  /* Место под кнопку меню: без него длинное название заезжает под «⋯». */
+  padding-right: 2.75rem;
+  font: inherit;
+  color: inherit;
+  background: none;
+  border: none;
+  border-radius: var(--radius-lg);
+  cursor: pointer;
+  text-align: left;
+}
+
+.deck-card__name {
+  font-weight: var(--weight-bold);
+  overflow-wrap: anywhere;
+}
+
+.deck-card__count {
+  font-size: 0.85rem;
+  color: var(--text-muted);
+}
+
+.deck-card__unfinished {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+  font-size: 0.8rem;
+  color: var(--accent);
+}
+
+.deck-card__unfinished::before {
+  content: '';
+  width: 0.4rem;
+  height: 0.4rem;
+  border-radius: var(--radius-pill);
+  background: var(--accent);
+}
+
+.deck-card__menu {
+  position: absolute;
+  top: var(--space-2);
+  right: var(--space-2);
+}
+
+.deck-card__rename-label {
+  display: block;
+  width: 100%;
+}
+
+.deck-card__rename {
+  width: 100%;
+  padding: var(--space-2) var(--space-3);
+  font: inherit;
+  color: var(--text);
+  background: var(--bg);
+  border: 1px solid var(--surface-raised);
+  border-radius: var(--radius-sm);
+}
+
+.deck-card__confirm {
+  margin: 0;
+  text-align: center;
+}
+
+.deck-card__buttons {
+  display: flex;
+  gap: var(--space-3);
+  align-items: center;
+  justify-content: center;
+}
+
+.btn--danger {
+  background: var(--no);
+  color: #2a0708;
+}
+
+.chip {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.35rem 0.85rem;
+  border: 1.5px solid var(--surface-raised);
+  border-radius: var(--radius-pill);
+  color: var(--text-muted);
+  font-size: 0.9rem;
+  cursor: pointer;
+}
+
+/* Сам переключатель не показываем, но оставляем в потоке: он несёт роль,
+   имя и состояние для читалки, и по нему же ходят стрелки внутри группы. */
+.chip input {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  margin: -1px;
+  padding: 0;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
+.chip:has(input:checked) {
+  border-color: var(--accent);
+  background: #4255ff26;
+  color: var(--text);
+  font-weight: var(--weight-semibold);
+}
+
+.chip:has(input:disabled) {
+  /* Не opacity: на проекторе контраст и так хуже, а 45% уводят подпись
+     почти в фон. Приглушаем цветом, оставляя текст читаемым. */
+  border-color: var(--surface);
+  color: var(--text-muted);
+  cursor: not-allowed;
+}
+
+/* Кольцо фокуса рисует сам чип: визуально скрытый input показать негде. */
+.chip:has(input:focus-visible) {
+  box-shadow: var(--focus-ring);
+}
+
+.mode-tile {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  min-height: 9rem;
+  padding: var(--space-4);
+  border: none;
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-md);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.mode-tile--simple {
+  background: var(--mode-simple);
+  color: #fff;
+}
+
+.mode-tile--ring {
+  background: var(--mode-ring);
+  color: var(--mode-ring-text);
+}
+
+.mode-tile__name {
+  font-size: 1.05rem;
+  font-weight: var(--weight-bold);
+}
+
+.mode-tile__hint {
+  font-size: 0.82rem;
+  opacity: 0.85;
+}
+
+.mode-tile__preview {
+  display: flex;
+  gap: var(--space-1);
+  align-items: flex-end;
+  height: 2.4rem;
+  margin-top: auto;
+}
+
+.mode-tile__preview i {
+  width: 1.5rem;
+  border-radius: var(--radius-sm);
+  background: currentColor;
+  opacity: 0.25;
+}
+
+.mode-tile__preview i:nth-child(1) {
+  height: 1.9rem;
+}
+
+.mode-tile__preview i:nth-child(2) {
+  height: 2.4rem;
+  opacity: 0.4;
+}
+
+.mode-tile__preview i:nth-child(3) {
+  height: 1.4rem;
+}
+
+.card__tint {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+}
+
+.card__tint--yes {
+  background: #3ccf9124;
+  opacity: var(--tint-yes, 0);
+}
+
+.card__tint--no {
+  background: #ff5a5f24;
+  opacity: var(--tint-no, 0);
+}
+
+.card__stamp {
+  position: absolute;
+  top: var(--space-4);
+  padding: 0.2rem 0.55rem;
+  border: 2.5px solid currentColor;
+  border-radius: var(--radius-sm);
+  font-size: 1rem;
+  font-weight: var(--weight-heavy);
+  letter-spacing: 0.08em;
+  pointer-events: none;
+}
+
+.card__stamp--yes {
+  right: var(--space-4);
+  color: var(--yes);
+  opacity: var(--tint-yes, 0);
+  transform: rotate(9deg);
+}
+
+.card__stamp--no {
+  left: var(--space-4);
+  color: var(--no);
+  opacity: var(--tint-no, 0);
+  transform: rotate(-9deg);
+}
+
+.counter {
+  min-width: 3rem;
+  padding: 0.25rem 0.75rem;
+  border-radius: var(--radius-pill);
+  font-weight: var(--weight-bold);
+  font-variant-numeric: tabular-nums;
+}
+
+.counter--yes {
+  background: #3ccf9126;
+  color: var(--yes);
+}
+
+.counter--no {
+  background: #ff5a5f26;
+  color: var(--no);
+}
+
+/* Приглушённая заливка, не сплошная: у проектора контраст хуже, чем у
+   монитора, и сплошной цвет на стене слепит. */
+.btn--yes {
+  background: #3ccf912e;
+  color: var(--yes);
+  border: 1.5px solid #3ccf916b;
+}
+
+.btn--no {
+  background: #ff5a5f2e;
+  color: var(--no);
+  border: 1.5px solid #ff5a5f6b;
+}
+
+.result-ring {
+  position: relative;
+  width: 136px;
+  height: 136px;
+}
+
+.result-ring__track {
+  stroke: #ffffff1a;
+}
+
+.result-ring__fill {
+  stroke: var(--yes);
+  stroke-linecap: round;
+}
+
+.result-ring__value {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  font-size: 1.8rem;
+  font-weight: var(--weight-heavy);
+  font-variant-numeric: tabular-nums;
+}
+
+.transition {
+  position: relative;
+}
+
+.transition__pane--leaving {
+  position: absolute;
+  inset: 0;
+  animation: pane-leave 340ms cubic-bezier(0.3, 0.7, 0.3, 1) forwards;
+}
+
+.transition__pane--entering {
+  animation: pane-enter 340ms cubic-bezier(0.3, 0.7, 0.3, 1);
+}
+
+@keyframes pane-enter {
+  from {
+    opacity: 0;
+    transform: translateX(var(--pane-from, 22%));
+  }
+}
+
+@keyframes pane-leave {
+  to {
+    opacity: 0;
+    transform: translateX(var(--pane-to, -22%)) scale(0.96);
+  }
+}
+
+.transition--forward {
+  --pane-from: 22%;
+  --pane-to: -22%;
+}
+
+.transition--back {
+  --pane-from: -22%;
+  --pane-to: 22%;
+}

@@ -1,4 +1,4 @@
-import { render, screen } from '@testing-library/react';
+import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import App from '@/App';
 import { STORAGE_KEY, STORAGE_VERSION } from '@/core/storage';
@@ -127,14 +127,19 @@ describe('App: полный цикл', () => {
     render(<App storage={storage} />);
 
     await importDeck(user);
-    await user.click(screen.getByRole('button', { name: 'Простой просмотр' }));
+    await user.click(screen.getByRole('button', { name: /^Просмотр/ }));
 
     await user.click(screen.getByRole('button', { name: 'Знаю' }));
     await screen.findByText('谢谢');
     await user.click(screen.getByRole('button', { name: 'Знаю' }));
 
     expect(await screen.findByRole('heading', { name: 'Готово' })).toBeInTheDocument();
-    expect(screen.getByText('Знаю: 2 · Не знаю: 0')).toBeInTheDocument();
+    expect(screen.getByRole('img', { name: 'Верных ответов: 100%' })).toBeInTheDocument();
+    // Счётчики на итогах набегают, поэтому ждём конечное значение.
+    await waitFor(() => expect(screen.getByTestId('count-known')).toHaveTextContent('2'), {
+      timeout: 3000,
+    });
+    expect(screen.getByTestId('count-unknown')).toHaveTextContent('0');
   });
 
   it('отмена импорта не трогает начатую тренировку', async () => {
@@ -143,7 +148,7 @@ describe('App: полный цикл', () => {
     render(<App storage={storage} />);
 
     await importDeck(user);
-    await user.click(screen.getByRole('button', { name: 'Простой просмотр' }));
+    await user.click(screen.getByRole('button', { name: /^Просмотр/ }));
     await user.click(screen.getByRole('button', { name: 'Знаю' }));
     await screen.findByText('谢谢');
 
@@ -165,7 +170,7 @@ describe('App: полный цикл', () => {
     render(<App storage={storage} />);
 
     await importDeck(user);
-    await user.click(screen.getByRole('button', { name: 'Простой просмотр' }));
+    await user.click(screen.getByRole('button', { name: /^Просмотр/ }));
     await user.click(screen.getByRole('button', { name: 'Знаю' }));
     await screen.findByText('谢谢');
 
@@ -234,7 +239,7 @@ describe('App: полный цикл', () => {
 
     await importDeck(user);
     await user.click(screen.getByLabelText('Перевод → иероглиф'));
-    await user.click(screen.getByRole('button', { name: 'Простой просмотр' }));
+    await user.click(screen.getByRole('button', { name: /^Просмотр/ }));
 
     expect(screen.getByText('привет')).toBeInTheDocument();
   });

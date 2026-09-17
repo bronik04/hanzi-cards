@@ -1,0 +1,222 @@
+.import__textarea {
+  width: min(90vw, 48rem);
+  min-height: 12rem;
+  padding: var(--space-4);
+  font: inherit;
+  color: var(--text);
+  background: var(--surface);
+  border: 1px solid var(--surface-raised);
+  border-radius: var(--radius-lg);
+  resize: vertical;
+}
+
+.import__columns {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-4);
+  border: 1px solid var(--surface-raised);
+  border-radius: var(--radius-lg);
+  padding: var(--space-3) var(--space-4);
+}
+
+.import__columns label {
+  display: flex;
+  align-items: center;
+  gap: var(--space-1);
+  cursor: pointer;
+}
+
+.import__preview {
+  width: min(90vw, 48rem);
+  border-collapse: collapse;
+  font-size: 0.95rem;
+}
+
+.import__preview th,
+.import__preview td {
+  padding: var(--space-1) var(--space-3);
+  border-bottom: 1px solid var(--surface-raised);
+  text-align: left;
+}
+
+.import__preview th {
+  color: var(--text-muted);
+  font-weight: var(--weight-semibold);
+}
+
+.import__more,
+.import__message {
+  margin: 0;
+  color: var(--text-muted);
+}
+
+.mode__directions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  justify-content: center;
+  margin: 0;
+  padding: 0;
+  border: none;
+}
+
+.mode__tiles {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--space-3);
+  width: min(90vw, 28rem);
+}
+
+@media (max-width: 40rem) {
+  .mode__tiles {
+    grid-template-columns: 1fr;
+  }
+}
+
+.mode__hint {
+  margin: 0;
+  font-size: 0.9rem;
+  color: var(--text-muted);
+}
+
+.screen--training {
+  justify-content: flex-start;
+  padding-top: 2vh;
+}
+
+.training__header {
+  display: flex;
+  align-items: center;
+  gap: var(--gap);
+  width: var(--card-width);
+}
+
+.training__progress {
+  margin: 0;
+  color: var(--text-muted);
+}
+
+.training__banner {
+  margin: 0;
+  color: var(--accent);
+  font-size: 1.125rem;
+  /* Слот держит высоту одной строки и пустым. Без этого баннер сдвигал бы
+     карточку и кнопки под ней вниз на время показа: на уроке клик в «Знаю»
+     попадал из-за этого в «Показать ответ». 1.4em равны line-height, так что
+     появление текста не меняет высоту ни на пиксель. */
+  line-height: 1.4;
+  min-height: 1.4em;
+}
+
+.training__buttons {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-3);
+  justify-content: center;
+}
+
+.training__confirm {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--gap);
+  padding: var(--space-3) var(--space-4);
+  border-radius: var(--radius-lg);
+  background: var(--surface-raised);
+}
+
+.training__confirm p {
+  margin: 0;
+}
+
+.resume__info,
+.done__info {
+  margin: 0;
+  color: var(--text-muted);
+}
+
+.resume__buttons,
+.done__buttons {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-3);
+  justify-content: center;
+}
+
+.import__error {
+  margin: 0;
+  color: var(--no);
+}
+
+/* Шире, чем было списком: 48rem хороши для строк во всю ширину, но для сетки
+   из трёх колонок это карточки по 250 пикселей — на проекторе читается плохо,
+   а по краям остаётся пустая стена. */
+.library {
+  width: min(90vw, 64rem);
+  display: flex;
+  flex-direction: column;
+  gap: var(--gap);
+}
+
+.library__bar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-3);
+  justify-content: center;
+}
+
+.library__grid {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: var(--space-3);
+  grid-template-columns: repeat(3, 1fr);
+}
+
+@media (max-width: 55rem) {
+  .library__grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+@media (max-width: 40rem) {
+  .library__grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+.library__empty {
+  margin: 0;
+  color: var(--text-muted);
+  text-align: center;
+}
+
+.mode__links {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-3);
+  justify-content: center;
+}
+
+.import__name {
+  width: min(90vw, 48rem);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  text-align: left;
+}
+
+.import__name span {
+  color: var(--text-muted);
+  font-size: 0.9rem;
+}
+
+.import__name input {
+  font: inherit;
+  padding: var(--space-2) var(--space-4);
+  color: var(--text);
+  background: var(--surface);
+  border: 1px solid var(--surface-raised);
+  border-radius: var(--radius-lg);
+}

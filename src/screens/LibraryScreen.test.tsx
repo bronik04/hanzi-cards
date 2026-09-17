@@ -95,10 +95,10 @@ describe('LibraryScreen', () => {
   it('выгрузка колоды отдаёт таблицу с её именем', async () => {
     const user = userEvent.setup();
     renderWithProvider(<LibraryScreen />, withDecks());
-    // Доступное имя кнопки включает название колоды (см. DeckRow.test.tsx) —
-    // точное совпадение 'выгрузить' ничего не найдёт, нужен якорный поиск.
-    const rows = screen.getAllByRole('button', { name: /^выгрузить/ });
-    await user.click(rows[0] as HTMLElement);
+    // Действия над колодой живут в меню «⋯» (см. DeckCard.test.tsx).
+    // Колоды отсортированы по недавности: первой идёт «Юнит 2».
+    await user.click(screen.getByRole('button', { name: 'Действия с колодой «Юнит 2»' }));
+    await user.click(screen.getByRole('menuitem', { name: 'Выгрузить таблицей' }));
 
     expect(downloads[0]?.fileName).toBe('Юнит 2.tsv');
     expect(downloads[0]?.text.split('\n')[0]).toBe('иероглиф\tпиньинь\tперевод');
@@ -147,7 +147,8 @@ describe('LibraryScreen', () => {
     expect(pendingReads).toHaveLength(1);
 
     // Файл ещё читается, а пользователь уже удалил колоду.
-    await user.click(screen.getByRole('button', { name: 'удалить «Юнит 1»' }));
+    await user.click(screen.getByRole('button', { name: 'Действия с колодой «Юнит 1»' }));
+    await user.click(screen.getByRole('menuitem', { name: 'Удалить' }));
     await user.click(screen.getByRole('button', { name: 'Удалить «Юнит 1»' }));
     expect(screen.queryByText('Юнит 1')).not.toBeInTheDocument();
 
